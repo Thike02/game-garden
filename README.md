@@ -61,8 +61,15 @@ uv run game-garden sync-steam --limit 5
 # 初めて見るゲームは IsThereAnyDeal から過去の価格履歴もまとめて取り込む
 uv run game-garden sync-wishlist
 
+# 今日セール中のウィッシュリストのゲームを Discord に通知する（sync-wishlist のあとに実行）
+uv run game-garden notify-sales
+# 送らずに内容だけ確認する
+uv run game-garden notify-sales --dry-run
+
 # テスト
 uv run pytest
 ```
 
 価格は Steam ストア（`STEAM_COUNTRY_CODE` の国）の価格だけを記録します。同じセットの商品を持っていると安くなる「バンドル割引」はセールではないので、割引前の価格で記録します。
+
+セールの通知は、割引率が `NOTIFY_MIN_DISCOUNT`（標準は20%）以上か、セール中で過去最安値以下のゲームが対象です。同じセールでは、値段がさらに下がらない限り一度しか通知しません。メッセージには、Steam での過去最安値と、直近1年の平均価格との比較も載せます。平均価格は、価格が変わるまで同じ値段が続いていたものとして、1日ずつ数えて計算します。
