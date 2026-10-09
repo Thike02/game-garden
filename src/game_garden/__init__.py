@@ -48,6 +48,12 @@ def notify_sales(args: argparse.Namespace) -> None:
     run(load_settings(), dry_run=args.dry_run)
 
 
+def notify_failure(args: argparse.Namespace) -> None:
+    from game_garden.notify import notify_failure as run
+
+    run(load_settings(), args.failed, args.run_url)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="game-garden")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -66,6 +72,11 @@ def build_parser() -> argparse.ArgumentParser:
     notify = commands.add_parser("notify-sales", help="send today's wishlist sales to Discord")
     notify.add_argument("--dry-run", action="store_true", help="print what would be sent without sending")
     notify.set_defaults(func=notify_sales)
+
+    failure = commands.add_parser("notify-failure", help="tell Discord that scheduled jobs failed")
+    failure.add_argument("--failed", action="append", required=True, help="failed command name (repeatable)")
+    failure.add_argument("--run-url", help="link to the CI run log")
+    failure.set_defaults(func=notify_failure)
     return parser
 
 

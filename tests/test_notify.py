@@ -6,6 +6,7 @@ from game_garden.notify import (
     SaleCandidate,
     already_notified,
     build_embed,
+    build_failure_embed,
     format_price,
     sale_started_on,
     should_notify,
@@ -89,3 +90,11 @@ def test_embed_for_regular_sale():
 def test_format_price():
     assert format_price(3465, "JPY") == "¥3,465"
     assert format_price(1999, "USD") == "19.99 USD"
+
+
+def test_failure_embed_lists_jobs_and_log_link():
+    embed = build_failure_embed(["sync-steam", "notify-sales"], "https://github.com/x/y/actions/runs/1")
+    assert embed["title"] == "⚠️ 毎日の更新に失敗しました"
+    assert "・所有ゲームと実績（`sync-steam`）" in embed["description"]
+    assert "・セール通知（`notify-sales`）" in embed["description"]
+    assert "[実行ログを見る](https://github.com/x/y/actions/runs/1)" in embed["description"]

@@ -17,6 +17,12 @@ JOB = "notify"
 AVERAGE_DAYS = 365
 COLOR_LOW = 0xF1C40F  # gold
 COLOR_SALE = 0x2ECC71  # green
+COLOR_ERROR = 0xE74C3C  # red
+JOB_LABELS = {
+    "sync-steam": "所有ゲームと実績",
+    "sync-wishlist": "ウィッシュリストと価格",
+    "notify-sales": "セール通知",
+}
 STORE_URL = "https://store.steampowered.com/app/{appid}/"
 
 
@@ -233,3 +239,16 @@ def notify_sales(settings: Settings, *, dry_run: bool = False) -> list[SaleCandi
     db.record_success(database, JOB, player_id, f"sent={len(to_send)}")
     print(f"Sent {len(to_send)} to Discord")
     return to_send
+
+
+def build_failure_embed(failed_jobs: Sequence[str], run_url: str | None) -> dict:
+    labels = [f"・{JOB_LABELS.get(job, job)}（`{job}`）" for job in failed_jobs]
+    description = "\n".join(["次の取得に失敗しました。", *labels])
+    if run_url:
+        description += f"\n\n[実行ログを見る]({run_url})"
+    return {"title": "⚠️ 毎日の更新に失敗しました", "description": description, "color": COLOR_ERROR}
+
+
+def notify_failure(settings: Settings, failed_jobs: Sequence[str], run_url: str | None) -> None:
+    settings.require("discord_webhook_url")
+    send_embeds(settings.discord_webhook_url, [build_failure_embed(failed_jobs, run_url)])
