@@ -11,7 +11,9 @@ from datetime import UTC, datetime
 import httpx
 
 API_BASE = "https://api.steampowered.com"
-HEADER_IMAGE_URL = "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/{appid}/header.jpg"
+STORE_ASSET_BASE = "https://shared.cloudflare.steamstatic.com/store_item_assets/"
+# Fallback only: newer apps keep their header under a hashed folder, which only the store API knows.
+HEADER_IMAGE_URL = STORE_ASSET_BASE + "steam/apps/{appid}/header.jpg"
 STORE_ITEMS_BATCH = 100
 
 # Store prices come in hundredths; currencies without a minor unit are stored in whole units.
@@ -84,16 +86,20 @@ class StoreItem:
     name: str
     coming_soon: bool
     price: StorePrice | None  # None when not purchasable (unreleased, delisted, ...)
-
-    @property
-    def header_image_url(self) -> str:
-        return HEADER_IMAGE_URL.format(appid=self.appid)
+    header_image_url: str
 
 
 def _from_unix(value: int | None) -> datetime | None:
     if not value:
         return None
     return datetime.fromtimestamp(value, tz=UTC)
+
+
+def header_image_from_assets(appid: int, assets: dict | None) -> str:
+    """Resolve the header image from the store API's `assets` (e.g. "<hash>/header.jpg")."""
+    if assets and assets.get("asset_url_format") and assets.get("header"):
+        return STORE_ASSET_BASE + assets["asset_url_format"].replace("${FILENAME}", assets["header"])
+    return HEADER_IMAGE_URL.format(appid=appid)
 
 
 def parse_store_price(option: dict | None, *, is_free: bool, currency: str) -> StorePrice | None:
@@ -272,7 +278,7 @@ class SteamClient:
             request = {
                 "ids": [{"appid": appid} for appid in appids[start : start + STORE_ITEMS_BATCH]],
                 "context": {"language": self._language, "country_code": country_code.upper()},
-                "data_request": {"include_release": True},
+                "data_request": {"include_release": True, "include_assets": True},
             }
             data = self._get_json("/IStoreBrowseService/GetItems/v1/", input_json=json.dumps(request))
             for item in data.get("response", {}).get("store_items", []):
@@ -286,6 +292,7 @@ class SteamClient:
                         price=parse_store_price(
                             item.get("best_purchase_option"), is_free=bool(item.get("is_free")), currency=currency
                         ),
+                        header_image_url=header_image_from_assets(item["appid"], item.get("assets")),
                     )
                 )
         return items

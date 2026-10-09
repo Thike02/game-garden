@@ -52,7 +52,19 @@ def upsert_player(database: Client, steam: SteamClient, steam_id: str) -> str:
     return rows[0]["id"]
 
 
-def _upsert_owned_games(database: Client, player_id: str, owned: list[OwnedGame]) -> dict[int, int]:
+def _load_header_images(steam: SteamClient, owned: list[OwnedGame], country_code: str) -> dict[int, str]:
+    """Exact header image URLs from the store; games missing here fall back to the guessed URL."""
+    try:
+        items = steam.get_store_items([g.appid for g in owned], country_code=country_code)
+    except Exception as e:  # images are cosmetic; never fail the sync over them
+        print(f"Header images unavailable ({e}); using fallback URLs")
+        return {}
+    return {item.appid: item.header_image_url for item in items}
+
+
+def _upsert_owned_games(
+    database: Client, player_id: str, owned: list[OwnedGame], header_images: dict[int, str]
+) -> dict[int, int]:
     """Store games and ownership rows. Returns appid -> games.id."""
     now = db.utcnow_iso()
     game_rows = [
@@ -60,7 +72,7 @@ def _upsert_owned_games(database: Client, player_id: str, owned: list[OwnedGame]
             "platform": "steam",
             "steam_appid": g.appid,
             "name": g.name,
-            "header_image_url": g.header_image_url,
+            "header_image_url": header_images.get(g.appid, g.header_image_url),
             "updated_at": now,
         }
         for g in owned
@@ -198,7 +210,8 @@ def sync_steam(settings: Settings, *, full: bool = False, limit: int | None = No
         try:
             player_id = upsert_player(database, steam, settings.steam_id)
             owned = steam.get_owned_games(settings.steam_id)
-            game_ids = _upsert_owned_games(database, player_id, owned)
+            header_images = _load_header_images(steam, owned, settings.steam_country_code)
+            game_ids = _upsert_owned_games(database, player_id, owned, header_images)
             _record_playtime_snapshots(database, player_id, owned, game_ids)
             result.owned_games = len(owned)
             print(f"Owned games: {len(owned)}")

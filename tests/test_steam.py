@@ -169,7 +169,13 @@ def test_store_items():
             json={
                 "response": {
                     "store_items": [
-                        {"appid": 10, "success": 1, "name": "Sale", "best_purchase_option": {"final_price_in_cents": "50000"}},
+                        {
+                            "appid": 10,
+                            "success": 1,
+                            "name": "Sale",
+                            "best_purchase_option": {"final_price_in_cents": "50000"},
+                            "assets": {"asset_url_format": "steam/apps/10/${FILENAME}?t=1", "header": "abc123/header.jpg"},
+                        },
                         {"appid": 20, "success": 1, "name": "Soon", "is_coming_soon": True},
                         {"appid": 30, "success": 2},
                     ]
@@ -181,6 +187,8 @@ def test_store_items():
     assert [i.appid for i in items] == [10, 20]
     assert items[0].price.price == 500
     assert items[1].coming_soon and items[1].price is None
+    assert items[0].header_image_url.endswith("/steam/apps/10/abc123/header.jpg?t=1")
+    assert items[1].header_image_url.endswith("/steam/apps/20/header.jpg")
 
 
 def test_store_items_unknown_country():
