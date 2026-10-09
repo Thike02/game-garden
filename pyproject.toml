@@ -1,0 +1,19 @@
+[project]
+name = "game-garden"
+version = "0.1.0"
+description = "Track owned games, achievements and wishlist prices from Steam and beyond"
+readme = "README.md"
+authors = [
+    { name = "YOSHIDA TAKUMI", email = "takuyoshi2002@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "python-dotenv>=1.2.4",
+]
+
+[project.scripts]
+game-garden = "game_garden:main"
+
+[build-system]
+requires = ["uv_build>=0.9.22,<0.10.0"]
+build-backend = "uv_build"
