@@ -13,6 +13,7 @@ from game_garden.config import Settings
 from game_garden.steam import OwnedGame, SteamClient, SteamPrivateProfileError
 
 JOB = "steam"
+PRIVATE_CHECK_MIN_GAMES = 3
 
 
 @dataclass
@@ -222,13 +223,19 @@ def sync_steam(settings: Settings, *, full: bool = False, limit: int | None = No
                 targets = targets[:limit]
             print(f"Achievements to sync: {len(targets)}")
 
+            private_failures = 0
             for i, game in enumerate(targets, start=1):
                 try:
                     unlocked, total = _sync_game_achievements(
                         database, steam, settings.steam_id, player_id, game_ids[game.appid], game.appid
                     )
                 except SteamPrivateProfileError:
-                    raise
+                    # The owned games list was readable, so the profile itself is public. Steam also
+                    # answers "Profile is not public" for single apps it won't serve stats for.
+                    private_failures += 1
+                    result.failed += 1
+                    print(f"  [{i}/{len(targets)}] {game.name}: skipped (Steam refused its achievements)")
+                    continue
                 except Exception as e:  # keep going; one broken app must not stop the run
                     result.failed += 1
                     print(f"  [{i}/{len(targets)}] {game.name}: failed ({e})")
@@ -236,6 +243,13 @@ def sync_steam(settings: Settings, *, full: bool = False, limit: int | None = No
                 result.achievement_games += 1
                 progress = f"{unlocked}/{total}" if total else "no achievements"
                 print(f"  [{i}/{len(targets)}] {game.name}: {progress}")
+
+            # Refused for every one of several games: achievements really are hidden. One or two
+            # refusals alone can just be odd apps, so they don't fail the whole run.
+            if len(targets) >= PRIVATE_CHECK_MIN_GAMES and private_failures == len(targets):
+                raise SteamPrivateProfileError(
+                    "Achievements are not visible. Set Steam profile > Privacy > Game details to Public."
+                )
 
             # Rebuilt from snapshots and unlock times, so it also picks up achievements synced above.
             database.rpc("refresh_daily_activity", {"p_player_id": player_id}).execute()
