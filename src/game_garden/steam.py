@@ -121,6 +121,8 @@ class SteamClient:
             steamid=steam_id,
             include_appinfo=1,
             include_played_free_games=1,
+            # Defaults to true and silently drops many small indie titles from the list.
+            skip_unvetted_apps=0,
         )
         response = data.get("response", {})
         # A private "Game details" setting yields an empty response instead of an error.

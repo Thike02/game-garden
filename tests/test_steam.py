@@ -15,6 +15,7 @@ def test_owned_games_parsed():
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.url.path == "/IPlayerService/GetOwnedGames/v1/"
         assert request.url.params["key"] == "test-key"
+        assert request.url.params["skip_unvetted_apps"] == "0"
         return httpx.Response(
             200,
             json={
