@@ -131,15 +131,22 @@ def test_wishlist_private_raises():
 
 
 def test_store_price_on_sale():
-    option = {"final_price_in_cents": "264000", "original_price_in_cents": "440000", "discount_pct": 40}
+    option = {
+        "final_price_in_cents": "264000",
+        "original_price_in_cents": "440000",
+        "discount_pct": 40,
+        "active_discounts": [{"discount_amount": "176000", "discount_end_date": 1792688400}],
+    }
     price = parse_store_price(option, is_free=False, currency="JPY")
     assert (price.price, price.regular_price, price.discount_pct) == (2640, 4400, 40)
+    assert price.sale_ends_at == datetime.fromtimestamp(1792688400, tz=UTC)
 
 
 def test_store_price_ignores_bundle_discount():
     option = {"final_price_in_cents": "153000", "bundle_discount_pct": 10, "price_before_bundle_discount": "170000"}
     price = parse_store_price(option, is_free=False, currency="JPY")
     assert (price.price, price.regular_price, price.discount_pct) == (1700, 1700, 0)
+    assert price.sale_ends_at is None
 
 
 def test_store_price_keeps_cents_for_usd():

@@ -110,6 +110,7 @@ def _record_today_prices(database: Client, game_ids: dict[int, int], store_items
             "regular_price": item.price.regular_price,
             "discount_pct": item.price.discount_pct,
             "currency": item.price.currency,
+            "sale_ends_at": item.price.sale_ends_at.isoformat() if item.price.sale_ends_at else None,
             "source": "collector",
         }
         for appid, item in store_items.items()

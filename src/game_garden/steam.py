@@ -75,6 +75,7 @@ class StorePrice:
     regular_price: int
     discount_pct: int
     currency: str
+    sale_ends_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -104,11 +105,14 @@ def parse_store_price(option: dict | None, *, is_free: bool, currency: str) -> S
     # A "bundle discount" only applies because the user owns part of a package; it is not a sale.
     price = int(option.get("price_before_bundle_discount") or option["final_price_in_cents"])
     regular = int(option.get("original_price_in_cents") or price)
+    discount_pct = int(option.get("discount_pct") or 0)
+    end_dates = [d["discount_end_date"] for d in option.get("active_discounts", []) if d.get("discount_end_date")]
     return StorePrice(
         price=price // divisor,
         regular_price=regular // divisor,
-        discount_pct=int(option.get("discount_pct") or 0),
+        discount_pct=discount_pct,
         currency=currency,
+        sale_ends_at=_from_unix(min(end_dates)) if discount_pct and end_dates else None,
     )
 
 
