@@ -22,6 +22,7 @@ class Settings:
     supabase_anon_key: str | None
     supabase_service_role_key: str | None
     steam_country_code: str
+    notify_min_discount: int
 
     def require(self, *names: str) -> None:
         """Raise ConfigError listing every missing setting among `names`."""
@@ -48,4 +49,5 @@ def load_settings() -> Settings:
         supabase_anon_key=_get("SUPABASE_ANON_KEY"),
         supabase_service_role_key=_get("SUPABASE_SERVICE_ROLE_KEY"),
         steam_country_code=_get("STEAM_COUNTRY_CODE") or "JP",
+        notify_min_discount=int(_get("NOTIFY_MIN_DISCOUNT") or 20),
     )

@@ -42,6 +42,12 @@ def sync_wishlist(args: argparse.Namespace) -> None:
     run(load_settings())
 
 
+def notify_sales(args: argparse.Namespace) -> None:
+    from game_garden.notify import notify_sales as run
+
+    run(load_settings(), dry_run=args.dry_run)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="game-garden")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -56,6 +62,10 @@ def build_parser() -> argparse.ArgumentParser:
     commands.add_parser(
         "sync-wishlist", help="sync the Steam wishlist, record today's prices and backfill history from ITAD"
     ).set_defaults(func=sync_wishlist)
+
+    notify = commands.add_parser("notify-sales", help="send today's wishlist sales to Discord")
+    notify.add_argument("--dry-run", action="store_true", help="print what would be sent without sending")
+    notify.set_defaults(func=notify_sales)
     return parser
 
 
