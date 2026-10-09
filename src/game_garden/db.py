@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator, Sequence
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta, timezone
 from typing import Any
 
 from supabase import Client, create_client
@@ -11,6 +11,8 @@ from supabase import Client, create_client
 from game_garden.config import Settings
 
 CHUNK_SIZE = 500
+# Calendar days (price records, activity) follow Japan time. JST has no DST.
+JST = timezone(timedelta(hours=9), "JST")
 
 
 def connect(settings: Settings) -> Client:
@@ -22,19 +24,35 @@ def utcnow_iso() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def today_jst() -> date:
+    return datetime.now(JST).date()
+
+
 def chunks(rows: Sequence[Any], size: int = CHUNK_SIZE) -> Iterator[Sequence[Any]]:
     for start in range(0, len(rows), size):
         yield rows[start : start + size]
 
 
 def upsert(
-    db: Client, table: str, rows: Sequence[dict], on_conflict: str, *, returning: bool = False
+    db: Client,
+    table: str,
+    rows: Sequence[dict],
+    on_conflict: str,
+    *,
+    returning: bool = False,
+    ignore_duplicates: bool = False,
 ) -> list[dict]:
-    """Upsert in chunks. Returns the stored rows only when `returning` is set."""
+    """Upsert in chunks. Returns the stored rows only when `returning` is set.
+
+    With `ignore_duplicates`, existing rows are left untouched instead of overwritten.
+    """
     stored: list[dict] = []
     for chunk in chunks(rows):
         query = db.table(table).upsert(
-            list(chunk), on_conflict=on_conflict, returning="representation" if returning else "minimal"
+            list(chunk),
+            on_conflict=on_conflict,
+            returning="representation" if returning else "minimal",
+            ignore_duplicates=ignore_duplicates,
         )
         result = query.execute()
         if returning:

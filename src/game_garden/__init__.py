@@ -36,6 +36,12 @@ def sync_steam(args: argparse.Namespace) -> None:
     )
 
 
+def sync_wishlist(args: argparse.Namespace) -> None:
+    from game_garden.wishlist_sync import sync_wishlist as run
+
+    run(load_settings())
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="game-garden")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -46,6 +52,10 @@ def build_parser() -> argparse.ArgumentParser:
     steam.add_argument("--full", action="store_true", help="refetch achievements for every owned game")
     steam.add_argument("--limit", type=int, help="sync achievements for at most N games")
     steam.set_defaults(func=sync_steam)
+
+    commands.add_parser(
+        "sync-wishlist", help="sync the Steam wishlist, record today's prices and backfill history from ITAD"
+    ).set_defaults(func=sync_wishlist)
     return parser
 
 

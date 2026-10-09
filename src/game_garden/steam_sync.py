@@ -40,7 +40,7 @@ def select_achievement_targets(
     return targets
 
 
-def _upsert_player(database: Client, steam: SteamClient, steam_id: str) -> str:
+def upsert_player(database: Client, steam: SteamClient, steam_id: str) -> str:
     summary = steam.get_player_summary(steam_id)
     rows = db.upsert(
         database,
@@ -178,7 +178,7 @@ def sync_steam(settings: Settings, *, full: bool = False, limit: int | None = No
 
     with SteamClient(settings.steam_api_key) as steam:
         try:
-            player_id = _upsert_player(database, steam, settings.steam_id)
+            player_id = upsert_player(database, steam, settings.steam_id)
             owned = steam.get_owned_games(settings.steam_id)
             game_ids = _upsert_owned_games(database, player_id, owned)
             result.owned_games = len(owned)
