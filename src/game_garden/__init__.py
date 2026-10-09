@@ -50,6 +50,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    # Game names can contain characters the Windows console code page (cp932) cannot encode.
+    for stream in (sys.stdout, sys.stderr):
+        stream.reconfigure(encoding="utf-8", errors="replace")
     args = build_parser().parse_args()
     try:
         args.func(args)
