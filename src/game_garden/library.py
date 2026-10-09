@@ -1,9 +1,10 @@
-"""Games managed from the local admin: hand-entered and Web-API-hidden Steam games.
+"""Games managed from the local admin: hand-entered games and Steam games missing from the owned list.
 
 owned_games.source:
   'manual'    non-Steam game; counts and playtime typed in by hand
-  'community' Steam game the Web API won't report (e.g. mature content); achievements
-              come from the profile page, playtime is typed in by hand
+  'community' Steam game GetOwnedGames leaves out (e.g. a free game never launched);
+              achievements come from the profile page, playtime is typed in by hand.
+              If it later shows up in the owned list, the daily sync takes it over as 'steam'.
 The daily sync only writes source='steam' rows, so these are never overwritten.
 """
 
@@ -161,7 +162,7 @@ def update_manual_game(
 
 
 # ---------------------------------------------------------------------------
-# Steam games the Web API hides
+# Steam games missing from the owned list
 # ---------------------------------------------------------------------------
 
 
@@ -251,7 +252,7 @@ def sync_hidden_steam_game(database: Client, steam: SteamClient, settings: Setti
     """Refresh one 'community' game's achievements from the profile page. Returns (unlocked, total)."""
     player_id = get_player_id(database, steam, settings)
     if _source_of(database, player_id, game_id) != "community":
-        raise LibraryError("API から隠れている Steam ゲームだけ更新できます")
+        raise LibraryError("Steam の一覧に出てこないゲームだけ更新できます")
     appid = database.table("games").select("steam_appid").eq("id", game_id).execute().data[0]["steam_appid"]
 
     now = db.utcnow_iso()

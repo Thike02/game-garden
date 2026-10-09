@@ -1,7 +1,7 @@
 -- Games added by hand in the local admin:
 --   owned_games.source = 'manual'    : non-Steam games (counts typed in by hand)
---   owned_games.source = 'community' : Steam games the Web API hides (e.g. titles with mature
---                                      content); achievements are read from the profile page
+--   owned_games.source = 'community' : Steam games missing from GetOwnedGames (e.g. free games
+--                                      never launched); achievements are read from the profile page
 -- Each owned game can be hidden from the public page individually.
 
 alter table public.owned_games add column is_visible boolean not null default true;

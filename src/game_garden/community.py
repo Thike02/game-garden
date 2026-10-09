@@ -1,7 +1,7 @@
 """Read unlocked achievements from a Steam Community profile page.
 
-Used for games the Web API refuses to report (it hides titles with mature content and
-answers "Profile is not public"), while the profile's achievements page still lists them.
+Used for Steam games that GetOwnedGames leaves out (e.g. free games never launched), so
+their achievements are not synced daily. The profile's achievements page still lists them.
 This is scraping, not an API, so it may break when Steam changes the page.
 """
 

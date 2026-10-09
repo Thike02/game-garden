@@ -21,8 +21,8 @@
 {% macro hours(minutes) %}{{ "%.1f"|format((minutes or 0) / 60) }}{% endmacro %}
 
 <section>
-  <h1>API から隠れている Steam ゲーム</h1>
-  <p class="muted small">成人向けの内容を含むゲームなどは、Steam の API から見えません。実績はプロフィールの実績ページから読み取ります。プレイ時間は取れないので、手で入れてください。</p>
+  <h1>Steam の一覧に出てこないゲーム</h1>
+  <p class="muted small">遊んだことのない無料ゲームなど、持っていても Steam の所有ゲーム一覧に出てこないゲームを追加します。実績はプロフィールの実績ページから読み取ります。プレイ時間は取れないので、手で入れてください。</p>
   {% if hidden %}
   <div class="table-scroll">
   <table>

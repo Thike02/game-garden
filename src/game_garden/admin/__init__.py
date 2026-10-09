@@ -1,4 +1,4 @@
-"""Local admin: first-run setup, hand-entered games, and Steam games the Web API hides.
+"""Local admin: first-run setup, hand-entered games, and Steam games missing from the owned list.
 
 Runs on 127.0.0.1 only and uses the service_role key from .env.
 """

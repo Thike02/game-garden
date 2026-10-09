@@ -1,7 +1,7 @@
 """Find Steam apps this PC has played, from the local Steam client's files.
 
-The Web API leaves some owned games out (titles with mature content), so the local
-client is the only place that lists them. Read-only.
+GetOwnedGames leaves some games out (e.g. free games never launched), and the local
+client's files are one place that still lists them. Read-only.
 """
 
 from __future__ import annotations
