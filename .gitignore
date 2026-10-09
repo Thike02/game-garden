@@ -21,3 +21,6 @@ web/dist/
 .idea/
 Thumbs.db
 .DS_Store
+
+# local assistant instructions
+CLAUDE.md
