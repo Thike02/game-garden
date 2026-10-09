@@ -122,6 +122,40 @@ def _set_private(database: Client, player_id: str, game_id: int, private: bool) 
     ).eq("game_id", game_id).execute()
 
 
+def _refresh_private_flags(
+    database: Client, steam: SteamClient, steam_id: str, player_id: str, game_ids: dict[int, int], skip: set[int]
+) -> int:
+    """Re-check every game with achievements, since a game can be made private without being played.
+
+    Returns how many are private. Games in `skip` were just synced, which already set their flag.
+    """
+    rows = (
+        database.table("owned_games")
+        .select("game_id, steam_private")
+        .eq("player_id", player_id)
+        .eq("source", "steam")
+        .gt("achievements_total", 0)
+        .execute()
+        .data
+    )
+    was_private = {row["game_id"]: row["steam_private"] for row in rows}
+    private = 0
+    for appid, game_id in game_ids.items():
+        if game_id not in was_private or appid in skip:
+            continue
+        try:
+            steam.get_player_achievements(steam_id, appid)
+            is_private = False
+        except SteamPrivateProfileError:
+            is_private = True
+        except Exception:  # a flaky check must not change the flag
+            continue
+        private += is_private
+        if is_private != was_private[game_id]:
+            _set_private(database, player_id, game_id, is_private)
+    return private
+
+
 def _load_synced_at(database: Client, player_id: str, game_ids: dict[int, int]) -> dict[int, datetime | None]:
     appid_by_game_id = {game_id: appid for appid, game_id in game_ids.items()}
     synced_at: dict[int, datetime | None] = {}
@@ -251,6 +285,10 @@ def sync_steam(settings: Settings, *, full: bool = False, limit: int | None = No
                 result.achievement_games += 1
                 progress = f"{unlocked}/{total}" if total else "no achievements"
                 print(f"  [{i}/{len(targets)}] {game.name}: {progress}")
+
+            result.private += _refresh_private_flags(
+                database, steam, settings.steam_id, player_id, game_ids, {g.appid for g in targets}
+            )
 
             # Rebuilt from snapshots and unlock times, so it also picks up achievements synced above.
             database.rpc("refresh_daily_activity", {"p_player_id": player_id}).execute()
