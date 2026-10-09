@@ -37,9 +37,10 @@ def _get(name: str) -> str | None:
     return value or None
 
 
-def load_settings() -> Settings:
-    # Real environment variables (e.g. GitHub Actions secrets) take precedence over .env.
-    load_dotenv(override=False)
+def load_settings(*, prefer_env_file: bool = False) -> Settings:
+    # Real environment variables (e.g. GitHub Actions secrets) take precedence over .env,
+    # except in the local admin, which edits .env and must see its own changes.
+    load_dotenv(override=prefer_env_file)
     return Settings(
         steam_api_key=_get("STEAM_API_KEY"),
         steam_id=_get("STEAM_ID"),
