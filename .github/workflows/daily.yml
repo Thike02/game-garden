@@ -1,0 +1,78 @@
+name: Daily sync
+
+on:
+  schedule:
+    # 04:00 JST (19:00 UTC). Steam sales switch over at 02:00 JST.
+    - cron: "0 19 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
+      STEAM_ID: ${{ secrets.STEAM_ID }}
+      ITAD_API_KEY: ${{ secrets.ITAD_API_KEY }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      STEAM_COUNTRY_CODE: JP
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.2.0
+
+      - name: Install
+        run: uv sync --locked --no-dev
+
+      # Each job keeps going even if an earlier one failed; failures are reported at the end.
+      - name: Sync owned games and achievements
+        id: steam
+        continue-on-error: true
+        run: uv run game-garden sync-steam
+
+      - name: Sync wishlist and prices
+        id: wishlist
+        continue-on-error: true
+        run: uv run game-garden sync-wishlist
+
+      # Without today's prices there is nothing reliable to announce.
+      - name: Notify sales
+        id: notify
+        if: steps.wishlist.outcome == 'success'
+        continue-on-error: true
+        run: uv run game-garden notify-sales
+
+      - name: Report failures
+        if: >-
+          steps.steam.outcome == 'failure' ||
+          steps.wishlist.outcome == 'failure' ||
+          steps.notify.outcome == 'failure'
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          args=()
+          [ "${{ steps.steam.outcome }}" = failure ] && args+=(--failed sync-steam)
+          [ "${{ steps.wishlist.outcome }}" = failure ] && args+=(--failed sync-wishlist)
+          [ "${{ steps.notify.outcome }}" = failure ] && args+=(--failed notify-sales)
+          uv run game-garden notify-failure "${args[@]}" --run-url "$RUN_URL" || true
+          # Mark the run as failed so it also shows up red in GitHub.
+          exit 1
+
+  keepalive:
+    # Public repos stop running scheduled workflows after 60 days without activity.
+    # This re-enables the workflow through the API instead of making commits.
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - uses: liskin/gh-workflow-keepalive@v1
