@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import type {
+  AchievementDef,
   Activity,
   Badge,
   Game,
@@ -19,7 +20,6 @@ export const configured = Boolean(url && anonKey);
 const supabase = configured ? createClient(url!, anonKey!, { auth: { persistSession: false } }) : null;
 
 const PAGE_SIZE = 1000; // PostgREST's default max rows per request
-const BADGE_RARITIES = ["legendary", "epic", "rare"];
 
 type Page<T> = PromiseLike<{ data: T[] | null; error: { message: string } | null }>;
 
@@ -49,7 +49,7 @@ export async function loadPlayers(): Promise<Player[]> {
 
 export async function loadGarden(player: Player): Promise<GardenData> {
   const db = client();
-  const [games, playerGames, activity, badges, wishlist] = await Promise.all([
+  const [games, playerGames, activity, unlocked, wishlist] = await Promise.all([
     fetchAll<Game>((from, to) =>
       db
         .from("games")
@@ -78,8 +78,8 @@ export async function loadGarden(player: Player): Promise<GardenData> {
         .from("player_achievement_badges")
         .select("game_id, game_name, api_name, display_name, description, icon_url, global_percent, rarity, unlocked_at")
         .eq("player_id", player.id)
-        .in("rarity", BADGE_RARITIES)
         .order("global_percent")
+        .order("api_name")
         .range(from, to),
     ),
     player.show_wishlist
@@ -120,8 +120,21 @@ export async function loadGarden(player: Player): Promise<GardenData> {
     games: new Map(games.map((g) => [g.id, g])),
     playerGames,
     activity,
-    badges,
+    unlocked,
     wishlist,
     prices,
   };
+}
+
+/** Every achievement of one game (locked ones too), loaded when the game is opened. */
+export async function loadGameAchievements(gameId: number): Promise<AchievementDef[]> {
+  const db = client();
+  return fetchAll<AchievementDef>((from, to) =>
+    db
+      .from("achievements")
+      .select("api_name, display_name, description, icon_url, icon_gray_url, hidden, global_percent")
+      .eq("game_id", gameId)
+      .order("api_name")
+      .range(from, to),
+  );
 }

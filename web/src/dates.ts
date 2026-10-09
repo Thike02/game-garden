@@ -4,6 +4,11 @@ export function todayJst(now: Date = new Date()): string {
   return now.toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" }); // YYYY-MM-DD
 }
 
+/** JST calendar day of a timestamp. */
+export function dayJst(iso: string): string {
+  return todayJst(new Date(iso));
+}
+
 export function addDays(day: string, days: number): string {
   const d = new Date(`${day}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);

@@ -8,6 +8,8 @@ import { ThemeToggle } from "./components/ThemeToggle.tsx";
 import { Wishlist } from "./components/Wishlist.tsx";
 import type { GardenData, Player } from "./types.ts";
 
+const BADGE_RARITIES = new Set(["legendary", "epic", "rare"]);
+
 // ?player=<SteamID64> picks a player; otherwise the first public one is shown.
 function initialSteamId(): string | null {
   return new URLSearchParams(window.location.search).get("player");
@@ -55,9 +57,14 @@ export function App() {
     body = (
       <>
         <Profile player={player} data={data} />
-        <Garden activity={data.activity} showPlaytime={player.show_playtime} />
-        <Badges badges={data.badges} />
-        <GameList games={data.games} playerGames={data.playerGames} showPlaytime={player.show_playtime} />
+        <Garden activity={data.activity} unlocked={data.unlocked} showPlaytime={player.show_playtime} />
+        <Badges badges={data.unlocked.filter((a) => a.rarity && BADGE_RARITIES.has(a.rarity))} />
+        <GameList
+          games={data.games}
+          playerGames={data.playerGames}
+          unlocked={data.unlocked}
+          showPlaytime={player.show_playtime}
+        />
         {player.show_wishlist && <Wishlist games={data.games} wishlist={data.wishlist} prices={data.prices} />}
       </>
     );

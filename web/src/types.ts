@@ -47,6 +47,16 @@ export interface Badge {
   unlocked_at: string | null;
 }
 
+export interface AchievementDef {
+  api_name: string;
+  display_name: string;
+  description: string | null;
+  icon_url: string | null;
+  icon_gray_url: string | null;
+  hidden: boolean;
+  global_percent: number | null;
+}
+
 export interface WishlistItem {
   game_id: number;
   added_at: string | null;
@@ -67,7 +77,7 @@ export interface GardenData {
   games: Map<number, Game>;
   playerGames: PlayerGame[];
   activity: Activity[];
-  badges: Badge[];
+  unlocked: Badge[]; // every unlocked achievement, rarest first
   wishlist: WishlistItem[];
   prices: Map<number, PriceRow[]>; // per game, oldest first
 }

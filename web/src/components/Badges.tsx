@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { formatJst } from "../dates.ts";
 import type { Badge, Rarity } from "../types.ts";
+import { HoverCard } from "./HoverCard.tsx";
+import { AchievementCard } from "./AchievementCard.tsx";
 
 const RARITY_LABEL: Record<Rarity, string> = {
   legendary: "Legendary",
@@ -37,18 +39,20 @@ export function Badges({ badges }: { badges: Badge[] }) {
       ) : (
         <ul className="badges">
           {shown.map((b) => (
-            <li key={`${b.game_id}:${b.api_name}`} className={`badge ${b.rarity ?? ""}`}>
-              {b.icon_url ? <img src={b.icon_url} alt="" width={64} height={64} loading="lazy" /> : <span className="badge-blank" />}
-              <div className="badge-body">
-                <strong>{b.display_name}</strong>
-                <span className="muted small">{b.game_name}</span>
-                <span className="small">
-                  <span className={`rarity-text ${b.rarity ?? ""}`}>{b.global_percent?.toFixed(1)}%</span>
-                  {b.unlocked_at && (
-                    <span className="muted"> ・ {formatJst(b.unlocked_at, { year: "numeric", month: "numeric", day: "numeric" })}</span>
-                  )}
+            <li key={`${b.game_id}:${b.api_name}`}>
+              <HoverCard className={`badge ${b.rarity ?? ""}`} content={() => <AchievementCard achievement={b} />}>
+                {b.icon_url ? <img src={b.icon_url} alt="" width={64} height={64} loading="lazy" /> : <span className="badge-blank" />}
+                <span className="badge-body">
+                  <strong>{b.display_name}</strong>
+                  <span className="muted small">{b.game_name}</span>
+                  <span className="small">
+                    <span className={`rarity-text ${b.rarity ?? ""}`}>{b.global_percent?.toFixed(1)}%</span>
+                    {b.unlocked_at && (
+                      <span className="muted"> ・ {formatJst(b.unlocked_at, { year: "numeric", month: "numeric", day: "numeric" })}</span>
+                    )}
+                  </span>
                 </span>
-              </div>
+              </HoverCard>
             </li>
           ))}
         </ul>
