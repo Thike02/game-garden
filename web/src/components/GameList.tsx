@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { formatJst } from "../dates.ts";
-import type { Game, PlayerGame } from "../types.ts";
+import type { Badge, Game, PlayerGame } from "../types.ts";
+import { GameAchievements } from "./GameAchievements.tsx";
+import { HoverCard } from "./HoverCard.tsx";
 import { GameImage } from "./GameImage.tsx";
 
 type SortKey = "progress" | "recent" | "playtime" | "name";
@@ -8,6 +10,7 @@ type SortKey = "progress" | "recent" | "playtime" | "name";
 interface Props {
   games: Map<number, Game>;
   playerGames: PlayerGame[];
+  unlocked: Badge[];
   showPlaytime: boolean;
 }
 
@@ -32,7 +35,31 @@ function compare(sort: SortKey) {
   };
 }
 
-export function GameList({ games, playerGames, showPlaytime }: Props) {
+function Summary({ owned, game }: { owned: PlayerGame; game: Game }) {
+  const total = owned.achievements_total ?? 0;
+  const done = owned.achievements_unlocked ?? 0;
+  return (
+    <span className="day-card">
+      <strong>{game.name}</strong>
+      <span className="small">
+        {total === 0
+          ? "実績はありません"
+          : done === total
+            ? `${done}/${total} ・ コンプリート！✨`
+            : `${done}/${total} ・ あと ${total - done} 個`}
+      </span>
+      {total > 0 && <span className="muted small">押すと実績の一覧が開きます</span>}
+    </span>
+  );
+}
+
+export function GameList({ games, playerGames, unlocked, showPlaytime }: Props) {
+  const [open, setOpen] = useState<number | null>(null);
+  const unlockedByGame = useMemo(() => {
+    const map = new Map<number, Badge[]>();
+    for (const a of unlocked) map.set(a.game_id, [...(map.get(a.game_id) ?? []), a]);
+    return map;
+  }, [unlocked]);
   const [sort, setSort] = useState<SortKey>(showPlaytime ? "recent" : "progress");
   const [onlyAchievements, setOnlyAchievements] = useState(false);
 
@@ -67,8 +94,19 @@ export function GameList({ games, playerGames, showPlaytime }: Props) {
         </div>
       </div>
       <ul className="games">
-        {rows.map(({ game, owned, progress }) => (
-          <li key={game.id} className="game">
+        {rows.map(({ game, owned, progress }) => {
+          const expanded = open === game.id;
+          const toggle = () => progress !== null && setOpen(expanded ? null : game.id);
+          return (
+          <li key={game.id} className={`game-item${expanded ? " expanded" : ""}`}>
+            <HoverCard className="game-hover" tapToOpen={false} width={280} content={() => <Summary owned={owned} game={game} />}>
+            <div
+              className={`game${progress !== null ? " clickable" : ""}`}
+              role={progress !== null ? "button" : undefined}
+              aria-expanded={progress !== null ? expanded : undefined}
+              onClick={toggle}
+              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), toggle())}
+            >
             <GameImage src={game.header_image_url} width={184} height={69} label={game.platform} />
             <div className="game-body">
               <a
@@ -76,6 +114,7 @@ export function GameList({ games, playerGames, showPlaytime }: Props) {
                 href={game.steam_appid ? `https://store.steampowered.com/app/${game.steam_appid}/` : undefined}
                 target="_blank"
                 rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
               >
                 {game.name}
               </a>
@@ -100,8 +139,12 @@ export function GameList({ games, playerGames, showPlaytime }: Props) {
                 </span>
               )}
             </div>
+            </div>
+            </HoverCard>
+            {expanded && <GameAchievements gameId={game.id} unlocked={unlockedByGame.get(game.id) ?? []} />}
           </li>
-        ))}
+          );
+        })}
       </ul>
     </section>
   );
