@@ -16,7 +16,7 @@ as $$
   end
 $$;
 
--- Unlocked achievements with game info and rarity, rarest first per player.
+-- Unlocked achievements with game info and rarity (unordered; sort by global_percent to get the rarest).
 create or replace view public.player_achievement_badges
 with (security_invoker = true)
 as

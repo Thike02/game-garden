@@ -141,21 +141,28 @@ create table public.job_runs (
 
 -- ---------------------------------------------------------------------------
 -- Row level security: anon/authenticated may read, nobody but service_role may write
+-- (Written out per table so the Supabase SQL editor can see RLS is enabled.)
 -- ---------------------------------------------------------------------------
-do $$
-declare
-  t text;
-begin
-  foreach t in array array[
-    'players', 'games', 'owned_games', 'achievements', 'player_achievements',
-    'playtime_snapshots', 'daily_activity', 'wishlist_items', 'price_history',
-    'sale_notifications', 'job_runs'
-  ]
-  loop
-    execute format('alter table public.%I enable row level security', t);
-    execute format(
-      'create policy "public read" on public.%I for select to anon, authenticated using (true)', t
-    );
-  end loop;
-end
-$$;
+alter table public.players             enable row level security;
+alter table public.games               enable row level security;
+alter table public.owned_games         enable row level security;
+alter table public.achievements        enable row level security;
+alter table public.player_achievements enable row level security;
+alter table public.playtime_snapshots  enable row level security;
+alter table public.daily_activity      enable row level security;
+alter table public.wishlist_items      enable row level security;
+alter table public.price_history       enable row level security;
+alter table public.sale_notifications  enable row level security;
+alter table public.job_runs            enable row level security;
+
+create policy "public read" on public.players             for select to anon, authenticated using (true);
+create policy "public read" on public.games               for select to anon, authenticated using (true);
+create policy "public read" on public.owned_games         for select to anon, authenticated using (true);
+create policy "public read" on public.achievements        for select to anon, authenticated using (true);
+create policy "public read" on public.player_achievements for select to anon, authenticated using (true);
+create policy "public read" on public.playtime_snapshots  for select to anon, authenticated using (true);
+create policy "public read" on public.daily_activity      for select to anon, authenticated using (true);
+create policy "public read" on public.wishlist_items      for select to anon, authenticated using (true);
+create policy "public read" on public.price_history       for select to anon, authenticated using (true);
+create policy "public read" on public.sale_notifications  for select to anon, authenticated using (true);
+create policy "public read" on public.job_runs            for select to anon, authenticated using (true);
