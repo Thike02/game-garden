@@ -36,10 +36,27 @@ Steam を中心に、持っているゲームの実績やプレイ状況、ウ�
 
    Steam のプロフィールで「ゲームの詳細」を公開にしておく必要があります。公開していないと、実績やウィッシュリストを取得できません。
 
-3. Supabase の SQL Editor で [supabase/migrations/0001_init.sql](supabase/migrations/0001_init.sql) を実行する
+3. Supabase の SQL Editor で [supabase/migrations/](supabase/migrations/) の SQL を番号順に実行する
 
 4. 設定を確認する
 
    ```sh
    uv run game-garden check-config
    ```
+
+## 使い方
+
+```sh
+# Steam の所有ゲームと実績を同期する
+# 初回は全部のゲームを取得し、以降は前回から遊んだゲームだけ更新する
+uv run game-garden sync-steam
+
+# 全部のゲームの実績を取り直す
+uv run game-garden sync-steam --full
+
+# 試しに数本だけ同期する
+uv run game-garden sync-steam --limit 5
+
+# テスト
+uv run pytest
+```
