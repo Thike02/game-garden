@@ -57,6 +57,12 @@ uv run game-garden sync-steam --full
 # 試しに数本だけ同期する
 uv run game-garden sync-steam --limit 5
 
+# ウィッシュリストを同期して、今日の Steam の価格を記録する
+# 初めて見るゲームは IsThereAnyDeal から過去の価格履歴もまとめて取り込む
+uv run game-garden sync-wishlist
+
 # テスト
 uv run pytest
 ```
+
+価格は Steam ストア（`STEAM_COUNTRY_CODE` の国）の価格だけを記録します。同じセットの商品を持っていると安くなる「バンドル割引」はセールではないので、割引前の価格で記録します。
