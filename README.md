@@ -96,3 +96,30 @@ gh secret set -f .env
 この場合、`.env` に書いてある値は全部 Secrets になります。`SUPABASE_ANON_KEY` などの使わない値も一緒に入りますが、問題はありません。
 
 public リポジトリでは、60日間何も動きがないと定期実行が止まってしまいます。それを防ぐために、ワークフローの中で keepalive も実行しています。
+
+## 公開ページ
+
+[web/](web/) は React + Vite の公開ページです。`main` の `web/` が更新されると、GitHub Actions（[.github/workflows/pages.yml](.github/workflows/pages.yml)）がビルドして GitHub Pages に公開します。データはブラウザから Supabase を `anon` キーで直接読むので、毎日の更新のたびにページを作り直す必要はありません。
+
+公開ページのビルドには、Secrets の `SUPABASE_URL` に加えて `SUPABASE_ANON_KEY` も必要です。
+
+手元で動かすときは、`web/.env.example` をコピーして `web/.env.local` を作ります。
+
+```sh
+cd web
+npm install
+npm run dev
+npm test
+```
+
+`?player=<SteamID64>` を付けると、表示するプレイヤーを選べます。付けないときは、最初に登録されたプレイヤーを表示します。
+
+### 公開範囲
+
+`players` の公開設定で、公開ページに出すものを決めます。この制限は Supabase の RLS でかけているので、API を直接読んでも非公開のデータは見えません。
+
+| 列 | 意味 | 新しく追加したプレイヤー |
+|---|---|---|
+| `is_public` | このプレイヤーを公開するか | 非公開 |
+| `show_playtime` | プレイ時間と、プレイ時間の草を出すか | 非公開 |
+| `show_wishlist` | ウィッシュリストと価格を出すか | 非公開 |
