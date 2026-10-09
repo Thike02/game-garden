@@ -73,3 +73,26 @@ uv run pytest
 価格は Steam ストア（`STEAM_COUNTRY_CODE` の国）の価格だけを記録します。同じセットの商品を持っていると安くなる「バンドル割引」はセールではないので、割引前の価格で記録します。
 
 セールの通知は、割引率が `NOTIFY_MIN_DISCOUNT`（標準は20%）以上か、セール中で過去最安値以下のゲームが対象です。同じセールでは、値段がさらに下がらない限り一度しか通知しません。メッセージには、Steam での過去最安値と、直近1年の平均価格との比較も載せます。平均価格は、価格が変わるまで同じ値段が続いていたものとして、1日ずつ数えて計算します。
+
+## 定期実行（GitHub Actions）
+
+[.github/workflows/daily.yml](.github/workflows/daily.yml) が毎朝4時（日本時間）に `sync-steam` → `sync-wishlist` → `notify-sales` を実行します。どれかが失敗しても残りは実行し、最後に失敗したものを Discord に知らせます。Actions のページから手動でも実行できます。
+
+リポジトリの Settings > Secrets and variables > Actions に、次の Secrets を登録してください。
+
+- `STEAM_API_KEY`
+- `STEAM_ID`
+- `ITAD_API_KEY`
+- `DISCORD_WEBHOOK_URL`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+GitHub CLI を使うなら、`.env` からまとめて登録できます。
+
+```sh
+gh secret set -f .env
+```
+
+この場合、`.env` に書いてある値は全部 Secrets になります。`SUPABASE_ANON_KEY` などの使わない値も一緒に入りますが、問題はありません。
+
+public リポジトリでは、60日間何も動きがないと定期実行が止まってしまいます。それを防ぐために、ワークフローの中で keepalive も実行しています。
