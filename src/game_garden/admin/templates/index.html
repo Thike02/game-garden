@@ -84,16 +84,27 @@
 
 <section>
   <h1>Steam 以外のゲーム</h1>
+  {% if nvidia_apps %}
+  <form method="post" action="/nvidia/refresh" class="actions" style="margin-top: 0">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button title="NVIDIA App が記録している最後の起動日時で更新します">PC の記録から最近遊んだ日を更新</button>
+    <span class="muted small">NVIDIA App が見つけたゲームだけ更新できます</span>
+  </form>
+  {% endif %}
   {% if manual %}
   <div class="table-scroll">
   <table>
-    <tr><th></th><th>ゲーム</th><th>実績</th><th>プレイ時間</th><th></th></tr>
+    <tr><th></th><th>ゲーム</th><th>実績</th><th>遊んだ日</th><th></th></tr>
     {% for g in manual %}
     <tr>
       <td>{% if g.games.header_image_url %}<img class="thumb" src="{{ g.games.header_image_url }}" alt="">{% endif %}</td>
       <td>{{ g.games.name }}<br><span class="badge muted">{{ g.games.platform }}</span></td>
       <td>{% if g.achievements_total %}{{ g.achievements_unlocked }}/{{ g.achievements_total }}{% else %}<span class="muted">なし</span>{% endif %}</td>
-      <td>{{ hours(g.playtime_minutes) }} 時間</td>
+      <td class="small">
+        {% if g.started_on %}{{ g.started_on }} から<br>{% endif %}
+        {% if g.last_played_at %}最近 {{ jst_date(g.last_played_at) }}{% endif %}
+        {% if g.playtime_minutes %}<br>{{ hours(g.playtime_minutes) }} 時間{% endif %}
+      </td>
       <td>{{ visibility_button(g) }} {{ delete_button(g) }}</td>
     </tr>
     <tr>
@@ -115,6 +126,14 @@
               <label class="field">実績の数<input type="number" min="0" name="achievements_total" value="{{ g.achievements_total or '' }}"></label>
               <label class="field">解除した数<input type="number" min="0" name="achievements_unlocked" value="{{ g.achievements_unlocked or '' }}"></label>
               <label class="field">プレイ時間（時間）<input type="number" step="0.1" min="0" name="playtime_hours" value="{{ hours(g.playtime_minutes) }}"></label>
+              <label class="field">遊び始めた日<input type="date" name="started_on" value="{{ g.started_on or '' }}"></label>
+              <label class="field">最近遊んだ日<input type="date" name="last_played_on" value="{{ jst_date(g.last_played_at) }}"></label>
+              <label class="field">NVIDIA App のゲーム
+                <select name="nvidia_app_name">
+                  <option value="">なし</option>
+                  {% for a in nvidia_apps %}<option value="{{ a.short_name }}" {{ "selected" if a.short_name == g.games.nvidia_app_name }}>{{ a.display_name }}</option>{% endfor %}
+                </select>
+              </label>
             </div>
             <div class="actions"><button class="primary">更新</button></div>
           </form>
@@ -141,6 +160,14 @@
       <label class="field">実績の数（任意）<input type="number" min="0" name="achievements_total"></label>
       <label class="field">解除した数（任意）<input type="number" min="0" name="achievements_unlocked"></label>
       <label class="field">プレイ時間（時間・任意）<input type="number" step="0.1" min="0" name="playtime_hours"></label>
+      <label class="field">遊び始めた日（任意）<input type="date" name="started_on"></label>
+      <label class="field">最近遊んだ日（任意）<input type="date" name="last_played_on"></label>
+      <label class="field">NVIDIA App のゲーム（任意）
+        <select name="nvidia_app_name">
+          <option value="">なし</option>
+          {% for a in nvidia_apps %}<option value="{{ a.short_name }}">{{ a.display_name }}</option>{% endfor %}
+        </select>
+      </label>
     </div>
     <div class="actions">
       <label class="small"><input type="checkbox" name="is_visible" checked> 公開ページに出す</label>

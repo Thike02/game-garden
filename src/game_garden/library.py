@@ -11,6 +11,7 @@ The daily sync only writes source='steam' rows, so these are never overwritten.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date, datetime, time
 
 from supabase import Client
 
@@ -19,6 +20,7 @@ from game_garden.community import CommunityPageError, fetch_page_rows, icon_hash
 from game_garden.config import Settings
 from game_garden.images import delete_game_image
 from game_garden.local_steam import played_appids, steam_dir
+from game_garden.nvidia import detected_apps
 from game_garden.local_state import ignored_appids
 from game_garden.steam import SteamClient
 
@@ -52,7 +54,8 @@ def list_managed_games(database: Client, player_id: str) -> list[dict]:
         database.table("owned_games")
         .select(
             "game_id, source, playtime_minutes, achievements_total, achievements_unlocked, "
-            "achievements_synced_at, is_visible, games(name, platform, steam_appid, header_image_url)"
+            "achievements_synced_at, is_visible, started_on, last_played_at, "
+            "games(name, platform, steam_appid, header_image_url, nvidia_app_name)"
         )
         .eq("player_id", player_id)
         .in_("source", ["manual", "community"])
@@ -92,6 +95,11 @@ def _counts(total: int | None, unlocked: int | None) -> tuple[int | None, int | 
     return total, unlocked
 
 
+def _day_start(day: date | None) -> str | None:
+    """A date typed in the admin as a timestamp: the start of that day in Japan time."""
+    return datetime.combine(day, time.min, tzinfo=db.JST).isoformat() if day else None
+
+
 def add_manual_game(
     database: Client,
     player_id: str,
@@ -103,12 +111,22 @@ def add_manual_game(
     achievements_unlocked: int | None,
     playtime_minutes: int | None,
     is_visible: bool,
+    started_on: date | None = None,
+    last_played_on: date | None = None,
+    nvidia_app_name: str | None = None,
 ) -> int:
     if not name.strip():
         raise LibraryError("名前を入れてください")
     game = (
         database.table("games")
-        .insert({"platform": platform, "name": name.strip(), "header_image_url": image_url or None})
+        .insert(
+            {
+                "platform": platform,
+                "name": name.strip(),
+                "header_image_url": image_url or None,
+                "nvidia_app_name": nvidia_app_name or None,
+            }
+        )
         .execute()
         .data[0]
     )
@@ -123,6 +141,8 @@ def add_manual_game(
             "achievements_unlocked": unlocked,
             "achievements_synced_at": db.utcnow_iso(),
             "is_visible": is_visible,
+            "started_on": started_on.isoformat() if started_on else None,
+            "last_played_at": _day_start(last_played_on),
         },
         returning="minimal",
     ).execute()
@@ -140,6 +160,9 @@ def update_manual_game(
     achievements_total: int | None,
     achievements_unlocked: int | None,
     playtime_minutes: int | None,
+    started_on: date | None = None,
+    last_played_on: date | None = None,
+    nvidia_app_name: str | None = None,
 ) -> None:
     if _source_of(database, player_id, game_id) != "manual":
         raise LibraryError("手で登録したゲームだけ編集できます")
@@ -147,7 +170,13 @@ def update_manual_game(
         raise LibraryError("名前を入れてください")
     old_image = database.table("games").select("header_image_url").eq("id", game_id).execute().data[0]["header_image_url"]
     database.table("games").update(
-        {"name": name.strip(), "platform": platform, "header_image_url": image_url or None, "updated_at": db.utcnow_iso()},
+        {
+            "name": name.strip(),
+            "platform": platform,
+            "header_image_url": image_url or None,
+            "nvidia_app_name": nvidia_app_name or None,
+            "updated_at": db.utcnow_iso(),
+        },
         returning="minimal",
     ).eq("id", game_id).execute()
     total, unlocked = _counts(achievements_total, achievements_unlocked)
@@ -157,12 +186,29 @@ def update_manual_game(
             "achievements_total": total,
             "achievements_unlocked": unlocked,
             "achievements_synced_at": db.utcnow_iso(),
+            "started_on": started_on.isoformat() if started_on else None,
+            "last_played_at": _day_start(last_played_on),
             "updated_at": db.utcnow_iso(),
         },
         returning="minimal",
     ).eq("player_id", player_id).eq("game_id", game_id).execute()
     if old_image != (image_url or None):
         delete_game_image(database, old_image)  # only removes images we uploaded
+
+
+def refresh_last_played_from_nvidia(database: Client, player_id: str) -> list[tuple[str, datetime]]:
+    """Move "last played" forward from NVIDIA App's launch records. Returns what changed."""
+    launches = {app.short_name: app.last_launch for app in detected_apps() if app.last_launch}
+    changed = []
+    for row in list_managed_games(database, player_id):
+        launched = launches.get(row["games"]["nvidia_app_name"] or "")
+        current = datetime.fromisoformat(row["last_played_at"]) if row["last_played_at"] else None
+        if launched and (current is None or launched > current):
+            database.table("owned_games").update(
+                {"last_played_at": launched.isoformat(), "updated_at": db.utcnow_iso()}, returning="minimal"
+            ).eq("player_id", player_id).eq("game_id", row["game_id"]).execute()
+            changed.append((row["games"]["name"], launched))
+    return changed
 
 
 # ---------------------------------------------------------------------------

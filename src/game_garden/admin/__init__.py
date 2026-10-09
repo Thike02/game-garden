@@ -6,6 +6,7 @@ Runs on 127.0.0.1 only and uses the service_role key from .env.
 from __future__ import annotations
 
 import secrets
+from datetime import date, datetime
 import webbrowser
 from pathlib import Path
 from urllib.parse import quote
@@ -20,6 +21,7 @@ from game_garden.config import Settings, load_settings
 from game_garden.env_file import update_env_file
 from game_garden.images import ImageError, upload_game_image
 from game_garden.local_state import ignore_appid
+from game_garden.nvidia import detected_apps
 from game_garden.setup_checks import GITHUB_SECRETS, run_checks, set_github_secrets
 from game_garden.steam import SteamClient
 
@@ -60,6 +62,15 @@ def _int(value: str | None) -> int | None:
     return int(value) if value and value.strip() else None
 
 
+def _jst_date(iso: str | None) -> str:
+    """Timestamp from the database -> YYYY-MM-DD in Japan time, for <input type=date>."""
+    return datetime.fromisoformat(iso).astimezone(db.JST).date().isoformat() if iso else ""
+
+
+def _date(value: str | None) -> date | None:
+    return date.fromisoformat(value) if value and value.strip() else None
+
+
 async def _image_url(database, image_url: str, image_file: UploadFile | None) -> str:
     """An uploaded file wins over a typed URL."""
     if image_file is not None and image_file.filename:
@@ -73,6 +84,7 @@ def create_app() -> FastAPI:
     csrf_token = secrets.token_urlsafe(32)
     templates.env.globals["csrf"] = csrf_token
     templates.env.globals["platforms"] = library.PLATFORMS
+    templates.env.globals["jst_date"] = _jst_date
 
     @app.middleware("http")
     async def local_only(request: Request, call_next):
@@ -142,7 +154,7 @@ def create_app() -> FastAPI:
             request, "index.html",
             manual=[g for g in games if g["source"] == "manual"],
             hidden=[g for g in games if g["source"] == "community"],
-            q=q or "", search=search,
+            q=q or "", search=search, nvidia_apps=detected_apps(),
         )
 
     @app.post("/manual", dependencies=[Depends(check_csrf)])
@@ -151,6 +163,7 @@ def create_app() -> FastAPI:
         image_file: UploadFile | None = File(None),
         achievements_total: str = Form(""), achievements_unlocked: str = Form(""),
         playtime_hours: str = Form(""), is_visible: str | None = Form(None),
+        started_on: str = Form(""), last_played_on: str = Form(""), nvidia_app_name: str = Form(""),
     ):
         settings = _settings()
         database, steam = clients(settings)
@@ -162,6 +175,7 @@ def create_app() -> FastAPI:
                 database, player_id, name=name, platform=platform, image_url=image,
                 achievements_total=_int(achievements_total), achievements_unlocked=_int(achievements_unlocked),
                 playtime_minutes=_minutes(playtime_hours), is_visible=is_visible == "on",
+                started_on=_date(started_on), last_played_on=_date(last_played_on), nvidia_app_name=nvidia_app_name,
             )
         except (library.LibraryError, ImageError, ValueError) as e:
             return _back("/", error=str(e))
@@ -172,6 +186,7 @@ def create_app() -> FastAPI:
         game_id: int, name: str = Form(...), platform: str = Form(...), image_url: str = Form(""),
         image_file: UploadFile | None = File(None),
         achievements_total: str = Form(""), achievements_unlocked: str = Form(""), playtime_hours: str = Form(""),
+        started_on: str = Form(""), last_played_on: str = Form(""), nvidia_app_name: str = Form(""),
     ):
         settings = _settings()
         database, steam = clients(settings)
@@ -183,10 +198,22 @@ def create_app() -> FastAPI:
                 database, player_id, game_id, name=name, platform=platform, image_url=image,
                 achievements_total=_int(achievements_total), achievements_unlocked=_int(achievements_unlocked),
                 playtime_minutes=_minutes(playtime_hours),
+                started_on=_date(started_on), last_played_on=_date(last_played_on), nvidia_app_name=nvidia_app_name,
             )
         except (library.LibraryError, ImageError, ValueError) as e:
             return _back("/", error=str(e))
         return _back("/", f"{name} を更新しました")
+
+    @app.post("/nvidia/refresh", dependencies=[Depends(check_csrf)])
+    def refresh_from_nvidia():
+        settings = _settings()
+        database, steam = clients(settings)
+        with steam:
+            player_id = library.get_player_id(database, steam, settings)
+        changed = library.refresh_last_played_from_nvidia(database, player_id)
+        if not changed:
+            return _back("/", "新しく遊んだ記録はありませんでした")
+        return _back("/", "最近遊んだ日を更新しました：" + "、".join(name for name, _ in changed))
 
     @app.post("/hidden", dependencies=[Depends(check_csrf)])
     def add_hidden(appid: int = Form(...), is_visible: str | None = Form(None)):
