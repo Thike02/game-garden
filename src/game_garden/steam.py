@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
@@ -10,6 +12,11 @@ import httpx
 
 API_BASE = "https://api.steampowered.com"
 HEADER_IMAGE_URL = "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/{appid}/header.jpg"
+STORE_ITEMS_BATCH = 100
+
+# Store prices come in hundredths; currencies without a minor unit are stored in whole units.
+COUNTRY_CURRENCY = {"JP": "JPY", "US": "USD", "GB": "GBP", "KR": "KRW", "CN": "CNY", "TW": "TWD"}
+ZERO_DECIMAL_CURRENCIES = {"JPY", "KRW"}
 
 
 class SteamError(RuntimeError):
@@ -55,10 +62,54 @@ class PlayerAchievement:
     unlocked_at: datetime | None
 
 
+@dataclass(frozen=True)
+class WishlistItem:
+    appid: int
+    priority: int | None
+    added_at: datetime | None
+
+
+@dataclass(frozen=True)
+class StorePrice:
+    price: int  # current price in minor units (JPY: yen), sale included, bundle discount excluded
+    regular_price: int
+    discount_pct: int
+    currency: str
+
+
+@dataclass(frozen=True)
+class StoreItem:
+    appid: int
+    name: str
+    coming_soon: bool
+    price: StorePrice | None  # None when not purchasable (unreleased, delisted, ...)
+
+    @property
+    def header_image_url(self) -> str:
+        return HEADER_IMAGE_URL.format(appid=self.appid)
+
+
 def _from_unix(value: int | None) -> datetime | None:
     if not value:
         return None
     return datetime.fromtimestamp(value, tz=UTC)
+
+
+def parse_store_price(option: dict | None, *, is_free: bool, currency: str) -> StorePrice | None:
+    if is_free:
+        return StorePrice(price=0, regular_price=0, discount_pct=0, currency=currency)
+    if not option or "final_price_in_cents" not in option:
+        return None
+    divisor = 100 if currency in ZERO_DECIMAL_CURRENCIES else 1
+    # A "bundle discount" only applies because the user owns part of a package; it is not a sale.
+    price = int(option.get("price_before_bundle_discount") or option["final_price_in_cents"])
+    regular = int(option.get("original_price_in_cents") or price)
+    return StorePrice(
+        price=price // divisor,
+        regular_price=regular // divisor,
+        discount_pct=int(option.get("discount_pct") or 0),
+        currency=currency,
+    )
 
 
 class SteamClient:
@@ -193,3 +244,44 @@ class SteamClient:
             for a in achievements
             if a.get("achieved")
         ]
+
+    def get_wishlist(self, steam_id: str) -> list[WishlistItem]:
+        data = self._get_json("/IWishlistService/GetWishlist/v1/", steamid=steam_id)
+        response = data.get("response", {})
+        # Private profiles (and, indistinguishably, empty wishlists) return no "items".
+        # Refuse rather than let the caller mark every wishlist entry as removed.
+        if "items" not in response:
+            raise SteamPrivateProfileError(
+                "Wishlist is empty or not visible. Set Steam profile > Privacy > Game details to Public."
+            )
+        return [
+            WishlistItem(appid=i["appid"], priority=i.get("priority"), added_at=_from_unix(i.get("date_added")))
+            for i in response["items"]
+        ]
+
+    def get_store_items(self, appids: Sequence[int], *, country_code: str) -> list[StoreItem]:
+        currency = COUNTRY_CURRENCY.get(country_code.upper())
+        if currency is None:
+            raise SteamError(f"Unsupported STEAM_COUNTRY_CODE {country_code!r}; add it to COUNTRY_CURRENCY")
+        items: list[StoreItem] = []
+        for start in range(0, len(appids), STORE_ITEMS_BATCH):
+            request = {
+                "ids": [{"appid": appid} for appid in appids[start : start + STORE_ITEMS_BATCH]],
+                "context": {"language": self._language, "country_code": country_code.upper()},
+                "data_request": {"include_release": True},
+            }
+            data = self._get_json("/IStoreBrowseService/GetItems/v1/", input_json=json.dumps(request))
+            for item in data.get("response", {}).get("store_items", []):
+                if item.get("success") != 1:
+                    continue
+                items.append(
+                    StoreItem(
+                        appid=item["appid"],
+                        name=item.get("name") or f"App {item['appid']}",
+                        coming_soon=bool(item.get("is_coming_soon")),
+                        price=parse_store_price(
+                            item.get("best_purchase_option"), is_free=bool(item.get("is_free")), currency=currency
+                        ),
+                    )
+                )
+        return items
