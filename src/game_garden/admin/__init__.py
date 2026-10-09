@@ -11,13 +11,14 @@ from pathlib import Path
 from urllib.parse import quote
 
 import httpx
-from fastapi import Depends, FastAPI, Form, HTTPException, Request
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from game_garden import db, library
 from game_garden.config import Settings, load_settings
 from game_garden.env_file import update_env_file
+from game_garden.images import ImageError, upload_game_image
 from game_garden.local_state import ignore_appid
 from game_garden.setup_checks import GITHUB_SECRETS, run_checks, set_github_secrets
 from game_garden.steam import SteamClient
@@ -57,6 +58,13 @@ def _minutes(hours: str | None) -> int | None:
 
 def _int(value: str | None) -> int | None:
     return int(value) if value and value.strip() else None
+
+
+async def _image_url(database, image_url: str, image_file: UploadFile | None) -> str:
+    """An uploaded file wins over a typed URL."""
+    if image_file is not None and image_file.filename:
+        return upload_game_image(database, await image_file.read())
+    return image_url.strip()
 
 
 def create_app() -> FastAPI:
@@ -138,8 +146,9 @@ def create_app() -> FastAPI:
         )
 
     @app.post("/manual", dependencies=[Depends(check_csrf)])
-    def add_manual(
+    async def add_manual(
         name: str = Form(...), platform: str = Form(...), image_url: str = Form(""),
+        image_file: UploadFile | None = File(None),
         achievements_total: str = Form(""), achievements_unlocked: str = Form(""),
         playtime_hours: str = Form(""), is_visible: str | None = Form(None),
     ):
@@ -148,18 +157,20 @@ def create_app() -> FastAPI:
         try:
             with steam:
                 player_id = library.get_player_id(database, steam, settings)
+            image = await _image_url(database, image_url, image_file)
             library.add_manual_game(
-                database, player_id, name=name, platform=platform, image_url=image_url.strip(),
+                database, player_id, name=name, platform=platform, image_url=image,
                 achievements_total=_int(achievements_total), achievements_unlocked=_int(achievements_unlocked),
                 playtime_minutes=_minutes(playtime_hours), is_visible=is_visible == "on",
             )
-        except (library.LibraryError, ValueError) as e:
+        except (library.LibraryError, ImageError, ValueError) as e:
             return _back("/", error=str(e))
         return _back("/", f"{name} を登録しました")
 
     @app.post("/manual/{game_id}", dependencies=[Depends(check_csrf)])
-    def update_manual(
+    async def update_manual(
         game_id: int, name: str = Form(...), platform: str = Form(...), image_url: str = Form(""),
+        image_file: UploadFile | None = File(None),
         achievements_total: str = Form(""), achievements_unlocked: str = Form(""), playtime_hours: str = Form(""),
     ):
         settings = _settings()
@@ -167,12 +178,13 @@ def create_app() -> FastAPI:
         try:
             with steam:
                 player_id = library.get_player_id(database, steam, settings)
+            image = await _image_url(database, image_url, image_file)
             library.update_manual_game(
-                database, player_id, game_id, name=name, platform=platform, image_url=image_url.strip(),
+                database, player_id, game_id, name=name, platform=platform, image_url=image,
                 achievements_total=_int(achievements_total), achievements_unlocked=_int(achievements_unlocked),
                 playtime_minutes=_minutes(playtime_hours),
             )
-        except (library.LibraryError, ValueError) as e:
+        except (library.LibraryError, ImageError, ValueError) as e:
             return _back("/", error=str(e))
         return _back("/", f"{name} を更新しました")
 

@@ -17,6 +17,7 @@ from supabase import Client
 from game_garden import db
 from game_garden.community import CommunityPageError, fetch_page_rows, icon_hash
 from game_garden.config import Settings
+from game_garden.images import delete_game_image
 from game_garden.local_steam import played_appids, steam_dir
 from game_garden.local_state import ignored_appids
 from game_garden.steam import SteamClient
@@ -144,6 +145,7 @@ def update_manual_game(
         raise LibraryError("手で登録したゲームだけ編集できます")
     if not name.strip():
         raise LibraryError("名前を入れてください")
+    old_image = database.table("games").select("header_image_url").eq("id", game_id).execute().data[0]["header_image_url"]
     database.table("games").update(
         {"name": name.strip(), "platform": platform, "header_image_url": image_url or None, "updated_at": db.utcnow_iso()},
         returning="minimal",
@@ -159,6 +161,8 @@ def update_manual_game(
         },
         returning="minimal",
     ).eq("player_id", player_id).eq("game_id", game_id).execute()
+    if old_image != (image_url or None):
+        delete_game_image(database, old_image)  # only removes images we uploaded
 
 
 # ---------------------------------------------------------------------------
@@ -339,7 +343,9 @@ def remove_game(database: Client, player_id: str, game_id: int) -> None:
     source = _source_of(database, player_id, game_id)
     if source == "manual":
         # Only this player uses a hand-entered game; removing it removes the catalog row too.
+        image = database.table("games").select("header_image_url").eq("id", game_id).execute().data[0]["header_image_url"]
         database.table("games").delete(returning="minimal").eq("id", game_id).execute()
+        delete_game_image(database, image)
     elif source == "community":
         database.table("player_achievements").delete(returning="minimal").eq("player_id", player_id).eq(
             "game_id", game_id

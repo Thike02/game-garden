@@ -101,7 +101,7 @@
       <td colspan="4">
         <details>
           <summary class="small">編集</summary>
-          <form method="post" action="/manual/{{ g.game_id }}">
+          <form method="post" action="/manual/{{ g.game_id }}" enctype="multipart/form-data">
             <input type="hidden" name="csrf" value="{{ csrf }}">
             <div class="grid" style="margin-top: 8px">
               <label class="field">名前<input type="text" name="name" value="{{ g.games.name }}" required></label>
@@ -111,6 +111,7 @@
                 </select>
               </label>
               <label class="field">画像の URL<input type="url" name="image_url" value="{{ g.games.header_image_url or '' }}"></label>
+              <label class="field">または画像ファイル（5MB まで）<input type="file" name="image_file" accept="image/jpeg,image/png,image/webp,image/gif"></label>
               <label class="field">実績の数<input type="number" min="0" name="achievements_total" value="{{ g.achievements_total or '' }}"></label>
               <label class="field">解除した数<input type="number" min="0" name="achievements_unlocked" value="{{ g.achievements_unlocked or '' }}"></label>
               <label class="field">プレイ時間（時間）<input type="number" step="0.1" min="0" name="playtime_hours" value="{{ hours(g.playtime_minutes) }}"></label>
@@ -128,7 +129,7 @@
   {% endif %}
 
   <h2 style="margin-top: 16px">追加</h2>
-  <form method="post" action="/manual">
+  <form method="post" action="/manual" enctype="multipart/form-data">
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <div class="grid">
       <label class="field">名前<input type="text" name="name" required></label>
@@ -136,6 +137,7 @@
         <select name="platform">{% for p in platforms %}<option>{{ p }}</option>{% endfor %}</select>
       </label>
       <label class="field">画像の URL（任意）<input type="url" name="image_url"></label>
+      <label class="field">または画像ファイル（5MB まで）<input type="file" name="image_file" accept="image/jpeg,image/png,image/webp,image/gif"></label>
       <label class="field">実績の数（任意）<input type="number" min="0" name="achievements_total"></label>
       <label class="field">解除した数（任意）<input type="number" min="0" name="achievements_unlocked"></label>
       <label class="field">プレイ時間（時間・任意）<input type="number" step="0.1" min="0" name="playtime_hours"></label>
