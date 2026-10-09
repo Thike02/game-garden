@@ -147,7 +147,10 @@ export function GameList({ games, playerGames, unlocked, showPlaytime }: Props) 
                   </span>
                 </div>
               )}
-              {owned.started_on && <span className="muted small">{owned.started_on.replaceAll("-", "/")} から遊んでいます</span>}
+              {/* Kept in the data for Steam games too (e.g. a game moved to Steam), but only shown for the others. */}
+              {owned.started_on && owned.source !== "steam" && (
+                <span className="muted small">{owned.started_on.replaceAll("-", "/")} から遊んでいます</span>
+              )}
               {showPlaytime && (
                 <PlayLine owned={owned} />
               )}
