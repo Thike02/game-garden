@@ -493,6 +493,14 @@ select,
   white-space: nowrap;
 }
 
+.platform-chip {
+  align-self: flex-start;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 8px;
+  color: var(--muted);
+}
+
 .game-name:hover {
   color: var(--accent);
 }

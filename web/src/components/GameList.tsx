@@ -48,7 +48,8 @@ function Summary({ owned, game }: { owned: PlayerGame; game: Game }) {
             ? `${done}/${total} ・ コンプリート！✨`
             : `${done}/${total} ・ あと ${total - done} 個`}
       </span>
-      {total > 0 && <span className="muted small">押すと実績の一覧が開きます</span>}
+      {owned.source === "manual" && <span className="muted small">{game.platform}・手で記録</span>}
+      {total > 0 && owned.source !== "manual" && <span className="muted small">押すと実績の一覧が開きます</span>}
     </span>
   );
 }
@@ -96,14 +97,16 @@ export function GameList({ games, playerGames, unlocked, showPlaytime }: Props) 
       <ul className="games">
         {rows.map(({ game, owned, progress }) => {
           const expanded = open === game.id;
-          const toggle = () => progress !== null && setOpen(expanded ? null : game.id);
+          // Hand-entered games only have counts, no per-achievement data.
+          const expandable = progress !== null && owned.source !== "manual";
+          const toggle = () => expandable && setOpen(expanded ? null : game.id);
           return (
           <li key={game.id} className={`game-item${expanded ? " expanded" : ""}`}>
             <HoverCard className="game-hover" tapToOpen={false} width={280} content={() => <Summary owned={owned} game={game} />}>
             <div
-              className={`game${progress !== null ? " clickable" : ""}`}
-              role={progress !== null ? "button" : undefined}
-              aria-expanded={progress !== null ? expanded : undefined}
+              className={`game${expandable ? " clickable" : ""}`}
+              role={expandable ? "button" : undefined}
+              aria-expanded={expandable ? expanded : undefined}
               onClick={toggle}
               onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), toggle())}
             >
@@ -118,6 +121,7 @@ export function GameList({ games, playerGames, unlocked, showPlaytime }: Props) 
               >
                 {game.name}
               </a>
+              {owned.source === "manual" && <span className="platform-chip small">{game.platform}</span>}
               {progress === null ? (
                 <span className="muted small">実績なし</span>
               ) : (
@@ -131,7 +135,7 @@ export function GameList({ games, playerGames, unlocked, showPlaytime }: Props) 
                   </span>
                 </div>
               )}
-              {showPlaytime && owned.playtime_minutes !== null && (
+              {showPlaytime && owned.playtime_minutes !== null && (owned.source === "steam" || owned.playtime_minutes > 0) && (
                 <span className="muted small">
                   {(owned.playtime_minutes / 60).toFixed(1)} 時間
                   {owned.last_played_at &&
