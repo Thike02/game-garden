@@ -13,13 +13,13 @@ from game_garden.config import Settings
 from game_garden.steam import OwnedGame, SteamClient, SteamPrivateProfileError
 
 JOB = "steam"
-PRIVATE_CHECK_MIN_GAMES = 3
 
 
 @dataclass
 class SyncResult:
     owned_games: int = 0
     achievement_games: int = 0
+    private: int = 0  # marked private on Steam, so their achievements can't be read
     failed: int = 0
 
 
@@ -107,11 +107,19 @@ def _record_playtime_snapshots(
             "game_id": game_ids[g.appid],
             "snapshot_date": today,
             "playtime_minutes": g.playtime_minutes,
+            # lets a game's first snapshot count only its recent playtime (see 0009)
+            "playtime_2weeks": g.playtime_2weeks,
             "last_played_at": g.last_played_at.isoformat() if g.last_played_at else None,
         }
         for g in owned
     ]
     db.upsert(database, "playtime_snapshots", rows, on_conflict="player_id,game_id,snapshot_date")
+
+
+def _set_private(database: Client, player_id: str, game_id: int, private: bool) -> None:
+    database.table("owned_games").update({"steam_private": private}, returning="minimal").eq(
+        "player_id", player_id
+    ).eq("game_id", game_id).execute()
 
 
 def _load_synced_at(database: Client, player_id: str, game_ids: dict[int, int]) -> dict[int, datetime | None]:
@@ -191,6 +199,7 @@ def _sync_game_achievements(
                 "achievements_total": len(schema) or None,
                 "achievements_unlocked": unlocked_count if schema else None,
                 "achievements_synced_at": now,
+                "steam_private": False,  # readable again
             },
             returning="minimal",
         )
@@ -223,18 +232,17 @@ def sync_steam(settings: Settings, *, full: bool = False, limit: int | None = No
                 targets = targets[:limit]
             print(f"Achievements to sync: {len(targets)}")
 
-            private_failures = 0
             for i, game in enumerate(targets, start=1):
                 try:
                     unlocked, total = _sync_game_achievements(
                         database, steam, settings.steam_id, player_id, game_ids[game.appid], game.appid
                     )
                 except SteamPrivateProfileError:
-                    # The owned games list was readable, so the profile itself is public. Steam also
-                    # answers "Profile is not public" for single apps it won't serve stats for.
-                    private_failures += 1
-                    result.failed += 1
-                    print(f"  [{i}/{len(targets)}] {game.name}: skipped (Steam refused its achievements)")
+                    # The owned games list was readable, so the profile itself is public: this one game
+                    # is marked private on Steam. Keep what we already have and flag it for the admin.
+                    _set_private(database, player_id, game_ids[game.appid], True)
+                    result.private += 1
+                    print(f"  [{i}/{len(targets)}] {game.name}: private on Steam, achievements kept as they were")
                     continue
                 except Exception as e:  # keep going; one broken app must not stop the run
                     result.failed += 1
@@ -244,13 +252,6 @@ def sync_steam(settings: Settings, *, full: bool = False, limit: int | None = No
                 progress = f"{unlocked}/{total}" if total else "no achievements"
                 print(f"  [{i}/{len(targets)}] {game.name}: {progress}")
 
-            # Refused for every one of several games: achievements really are hidden. One or two
-            # refusals alone can just be odd apps, so they don't fail the whole run.
-            if len(targets) >= PRIVATE_CHECK_MIN_GAMES and private_failures == len(targets):
-                raise SteamPrivateProfileError(
-                    "Achievements are not visible. Set Steam profile > Privacy > Game details to Public."
-                )
-
             # Rebuilt from snapshots and unlock times, so it also picks up achievements synced above.
             database.rpc("refresh_daily_activity", {"p_player_id": player_id}).execute()
         except Exception as e:
@@ -258,6 +259,9 @@ def sync_steam(settings: Settings, *, full: bool = False, limit: int | None = No
                 db.record_failure(database, JOB, player_id, f"{type(e).__name__}: {e}")
             raise
 
-    detail = f"owned={result.owned_games} synced={result.achievement_games} failed={result.failed}"
+    detail = (
+        f"owned={result.owned_games} synced={result.achievement_games} "
+        f"private={result.private} failed={result.failed}"
+    )
     db.record_success(database, JOB, player_id, detail)
     return result

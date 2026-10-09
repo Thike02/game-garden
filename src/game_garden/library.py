@@ -65,6 +65,23 @@ def list_managed_games(database: Client, player_id: str) -> list[dict]:
     return sorted(rows, key=lambda r: (r["source"], r["games"]["name"].lower()))
 
 
+def list_steam_private_games(database: Client, player_id: str) -> list[dict]:
+    """Steam games the daily sync found marked private on Steam."""
+    rows = (
+        database.table("owned_games")
+        .select(
+            "game_id, is_visible, achievements_total, achievements_unlocked, "
+            "games(name, steam_appid, header_image_url)"
+        )
+        .eq("player_id", player_id)
+        .eq("source", "steam")
+        .eq("steam_private", True)
+        .execute()
+        .data
+    )
+    return sorted(rows, key=lambda r: r["games"]["name"].lower())
+
+
 def _refresh_activity(database: Client, player_id: str) -> None:
     database.rpc("refresh_daily_activity", {"p_player_id": player_id}).execute()
 

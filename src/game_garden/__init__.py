@@ -32,7 +32,8 @@ def sync_steam(args: argparse.Namespace) -> None:
 
     result = run(load_settings(), full=args.full, limit=args.limit)
     print(
-        f"Done: {result.owned_games} owned, {result.achievement_games} achievement syncs, {result.failed} failed"
+        f"Done: {result.owned_games} owned, {result.achievement_games} achievement syncs, "
+        f"{result.private} private, {result.failed} failed"
     )
 
 

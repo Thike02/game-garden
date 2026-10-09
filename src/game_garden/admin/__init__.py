@@ -143,6 +143,7 @@ def create_app() -> FastAPI:
         with steam:
             player_id = library.get_player_id(database, steam, settings)
         games = library.list_managed_games(database, player_id)
+        private_games = library.list_steam_private_games(database, player_id)
         search = []
         if q and q.strip():
             if q.strip().isdigit():
@@ -154,7 +155,7 @@ def create_app() -> FastAPI:
             request, "index.html",
             manual=[g for g in games if g["source"] == "manual"],
             hidden=[g for g in games if g["source"] == "community"],
-            q=q or "", search=search, nvidia_apps=detected_apps(),
+            q=q or "", search=search, nvidia_apps=detected_apps(), private_games=private_games,
         )
 
     @app.post("/manual", dependencies=[Depends(check_csrf)])
