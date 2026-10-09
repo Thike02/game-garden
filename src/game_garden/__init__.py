@@ -54,6 +54,12 @@ def notify_failure(args: argparse.Namespace) -> None:
     run(load_settings(), args.failed, args.run_url)
 
 
+def admin(args: argparse.Namespace) -> None:
+    from game_garden.admin import serve
+
+    serve(open_browser=not args.no_browser)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="game-garden")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -77,6 +83,10 @@ def build_parser() -> argparse.ArgumentParser:
     failure.add_argument("--failed", action="append", required=True, help="failed command name (repeatable)")
     failure.add_argument("--run-url", help="link to the CI run log")
     failure.set_defaults(func=notify_failure)
+
+    admin_cmd = commands.add_parser("admin", help="open the local admin (setup, manual games) in the browser")
+    admin_cmd.add_argument("--no-browser", action="store_true", help="don't open the browser")
+    admin_cmd.set_defaults(func=admin)
     return parser
 
 

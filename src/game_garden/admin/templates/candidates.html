@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}候補{% endblock %}
+{% block content %}
+<section>
+  <h1>候補：API から見えないけど、この PC で遊んだゲーム</h1>
+  <p class="muted small">この PC の Steam フォルダの記録から、持っているゲームの一覧に出てこないもののうち、プロフィールに実績ページがあるゲームを並べています。ほかの PC だけで遊んだゲームは出てきません。</p>
+  {% if candidates %}
+  <table>
+    <tr><th></th><th>ゲーム</th><th>実績</th><th></th></tr>
+    {% for c in candidates %}
+    <tr>
+      <td>{% if c.header_image_url %}<img class="thumb" src="{{ c.header_image_url }}" alt="">{% endif %}</td>
+      <td>{{ c.name }}<br><span class="muted small">App {{ c.appid }}</span></td>
+      <td>{{ c.achievements_unlocked }}/{{ c.achievements_total }}</td>
+      <td>
+        <form class="inline" method="post" action="/hidden">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="appid" value="{{ c.appid }}">
+          <label class="small"><input type="checkbox" name="is_visible"> 公開ページに出す</label>
+          <button class="small primary">追加</button>
+        </form>
+        <form class="inline" method="post" action="/candidates/{{ c.appid }}/ignore">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button class="small" title="もう候補に出しません">無視</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="muted">候補はありません。</p>
+  {% endif %}
+</section>
+{% endblock %}

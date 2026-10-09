@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}設定{% endblock %}
+{% block content %}
+<section>
+  <h1>設定</h1>
+  {% if missing %}
+  <p>はじめに、使うサービスのキーを入れてください。「確認」で実際に使えるか試してから、「保存」で <code>.env</code> に書き込みます。</p>
+  {% else %}
+  <p class="muted">キーを変えたときは、「確認」で試してから「保存」してください。<code>.env</code> のほかの行やコメントはそのまま残ります。</p>
+  {% endif %}
+
+  <form method="post" action="/setup">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="grid">
+      {% set fields = [
+        ("STEAM_API_KEY", "Steam Web API キー", "password", "https://steamcommunity.com/dev/apikey"),
+        ("STEAM_ID", "SteamID64（17桁）", "text", None),
+        ("ITAD_API_KEY", "IsThereAnyDeal の API キー", "password", "https://isthereanydeal.com/apps/my/"),
+        ("DISCORD_WEBHOOK_URL", "Discord の Webhook URL", "password", None),
+        ("SUPABASE_URL", "Supabase の Project URL", "text", None),
+        ("SUPABASE_SERVICE_ROLE_KEY", "Supabase の Secret key（service_role）", "password", None),
+        ("SUPABASE_ANON_KEY", "Supabase の Publishable key（anon）", "password", None),
+      ] %}
+      {% for key, label, kind, link in fields %}
+      <label class="field">
+        <span>{{ label }}{% if link %} <a class="small" href="{{ link }}" target="_blank" rel="noreferrer">取得</a>{% endif %}</span>
+        <input type="{{ kind }}" name="{{ key }}" value="{{ values[key] }}" autocomplete="off" spellcheck="false">
+      </label>
+      {% endfor %}
+    </div>
+    <div class="actions">
+      <label class="small"><input type="checkbox" name="discord_test"> Discord にテストメッセージを送る</label>
+    </div>
+    <div class="actions">
+      <button name="action" value="check">確認</button>
+      <button class="primary" name="action" value="save">確認して保存</button>
+      <button name="action" value="secrets" title="gh secret set でこのリポジトリに登録します">GitHub の Secrets にも登録</button>
+    </div>
+    <p class="muted small">Secret key は何でも書き換えられる強いキーです。<code>.env</code> と GitHub の Secrets 以外には置かないでください。</p>
+  </form>
+</section>
+
+{% if results %}
+<section>
+  <h2>{{ title or "結果" }}</h2>
+  <table>
+    {% for r in results %}
+    <tr>
+      <td class="{{ 'ok' if r.ok else 'bad' }}">{{ "✅" if r.ok else "❌" }}</td>
+      <td>{{ r.name }}</td>
+      <td class="small">{{ r.message }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</section>
+{% endif %}
+{% endblock %}

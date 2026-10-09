@@ -24,3 +24,6 @@ Thumbs.db
 
 # local assistant instructions
 CLAUDE.md
+
+# local admin state
+.game-garden-local.json

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}管理画面{% endblock %} · Game Garden</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌱</text></svg>">
+  <style>
+    :root {
+      --bg: #171d25; --panel: #1f2a37; --panel-2: #26364a; --border: #2f4258;
+      --text: #c7d5e0; --strong: #fff; --muted: #8f98a0; --accent: #66c0f4;
+      --ok: #a4d007; --bad: #ff7b72; --legendary: #e5b143;
+      color-scheme: dark;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #eef2f6; --panel: #fff; --panel-2: #f2f6fa; --border: #d3dce5;
+        --text: #1b2838; --strong: #0e1621; --muted: #5d6b78; --accent: #1a73b8;
+        --ok: #4c7a00; --bad: #c62828; --legendary: #b5800e;
+        color-scheme: light;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.5;
+           font-family: "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif; }
+    a { color: var(--accent); }
+    header { display: flex; gap: 16px; align-items: center; max-width: 1000px; margin: 0 auto; padding: 12px 16px; }
+    header .brand { font-weight: 700; color: var(--strong); margin-right: auto; }
+    main { max-width: 1000px; margin: 0 auto; padding: 0 16px 48px; display: grid; gap: 16px; }
+    section { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 16px; min-width: 0; }
+    h1, h2 { margin: 0 0 8px; color: var(--strong); font-size: 1.15rem; }
+    h1 { font-size: 1.4rem; }
+    .muted { color: var(--muted); }
+    .small { font-size: .85rem; }
+    .flash { padding: 10px 14px; border-radius: 6px; border: 1px solid var(--ok); color: var(--ok); }
+    .flash.err { border-color: var(--bad); color: var(--bad); }
+    input, select, button { font: inherit; color: inherit; }
+    input[type=text], input[type=password], input[type=number], input[type=url], select {
+      background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; width: 100%; }
+    button { background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; padding: 6px 12px; cursor: pointer; }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #0e1621; font-weight: 700; }
+    button.danger { color: var(--bad); }
+    form.inline { display: inline; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px 16px; }
+    label.field { display: flex; flex-direction: column; gap: 4px; font-size: .9rem; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+    table { width: 100%; border-collapse: collapse; }
+    td, th { padding: 8px 6px; border-top: 1px solid var(--border); text-align: left; vertical-align: middle; }
+    th { color: var(--muted); font-weight: normal; font-size: .85rem; border-top: none; }
+    .thumb { width: 92px; height: 34px; object-fit: cover; border-radius: 2px; background: var(--border); display: block; }
+    .ok { color: var(--ok); } .bad { color: var(--bad); }
+    .badge { font-size: .75rem; border: 1px solid currentColor; border-radius: 999px; padding: 0 8px; white-space: nowrap; }
+    details summary { cursor: pointer; color: var(--accent); }
+    .table-scroll { overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="brand">🌱 Game Garden 管理画面</span>
+    <a href="/">ゲーム</a>
+    <a href="/candidates">候補を探す</a>
+    <a href="/setup">設定</a>
+  </header>
+  <main>
+    {% if msg %}<div class="flash">{{ msg }}</div>{% endif %}
+    {% if err %}<div class="flash err">{{ err }}</div>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}ゲーム{% endblock %}
+{% block content %}
+
+{% macro visibility_button(g) %}
+<form class="inline" method="post" action="/games/{{ g.game_id }}/visibility">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="is_visible" value="{{ 'false' if g.is_visible else 'true' }}">
+  <button class="small" title="公開ページに出すかどうか">{{ "🌐 公開中" if g.is_visible else "🔒 非公開" }}</button>
+</form>
+{% endmacro %}
+
+{% macro delete_button(g) %}
+<form class="inline" method="post" action="/games/{{ g.game_id }}/delete"
+      onsubmit="return confirm('{{ g.games.name }} を削除しますか？')">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <button class="small danger">削除</button>
+</form>
+{% endmacro %}
+
+{% macro hours(minutes) %}{{ "%.1f"|format((minutes or 0) / 60) }}{% endmacro %}
+
+<section>
+  <h1>API から隠れている Steam ゲーム</h1>
+  <p class="muted small">成人向けの内容を含むゲームなどは、Steam の API から見えません。実績はプロフィールの実績ページから読み取ります。プレイ時間は取れないので、手で入れてください。</p>
+  {% if hidden %}
+  <div class="table-scroll">
+  <table>
+    <tr><th></th><th>ゲーム</th><th>実績</th><th>プレイ時間</th><th></th></tr>
+    {% for g in hidden %}
+    <tr>
+      <td>{% if g.games.header_image_url %}<img class="thumb" src="{{ g.games.header_image_url }}" alt="">{% endif %}</td>
+      <td>{{ g.games.name }}<br><span class="muted small">App {{ g.games.steam_appid }}</span></td>
+      <td>{% if g.achievements_total %}{{ g.achievements_unlocked }}/{{ g.achievements_total }}{% else %}<span class="muted">なし</span>{% endif %}</td>
+      <td>
+        <form class="inline" method="post" action="/games/{{ g.game_id }}/playtime">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="number" name="playtime_hours" step="0.1" min="0" value="{{ hours(g.playtime_minutes) }}" style="width: 6em"> 時間
+          <button class="small">保存</button>
+        </form>
+      </td>
+      <td>
+        <form class="inline" method="post" action="/hidden/{{ g.game_id }}/refresh">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button class="small">実績を更新</button>
+        </form>
+        {{ visibility_button(g) }}
+        {{ delete_button(g) }}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  </div>
+  {% else %}
+  <p class="muted">まだありません。<a href="/candidates">候補を探す</a>か、下で名前や ID から追加できます。</p>
+  {% endif %}
+
+  <h2 style="margin-top: 16px">名前・ID から追加</h2>
+  <form method="get" action="/" class="actions" style="margin-top: 0">
+    <input type="text" name="q" value="{{ q }}" placeholder="ゲーム名か App ID" style="max-width: 320px">
+    <button>検索</button>
+  </form>
+  {% if search %}
+  <table>
+    {% for item in search %}
+    <tr>
+      <td>{% if item.tiny_image %}<img class="thumb" src="{{ item.tiny_image }}" alt="">{% endif %}</td>
+      <td>{{ item.name }} <span class="muted small">App {{ item.id }}</span></td>
+      <td>
+        <form class="inline" method="post" action="/hidden">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="appid" value="{{ item.id }}">
+          <label class="small"><input type="checkbox" name="is_visible"> 公開ページに出す</label>
+          <button class="small primary">追加</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% elif q %}
+  <p class="muted small">見つかりませんでした。</p>
+  {% endif %}
+</section>
+
+<section>
+  <h1>Steam 以外のゲーム</h1>
+  {% if manual %}
+  <div class="table-scroll">
+  <table>
+    <tr><th></th><th>ゲーム</th><th>実績</th><th>プレイ時間</th><th></th></tr>
+    {% for g in manual %}
+    <tr>
+      <td>{% if g.games.header_image_url %}<img class="thumb" src="{{ g.games.header_image_url }}" alt="">{% endif %}</td>
+      <td>{{ g.games.name }}<br><span class="badge muted">{{ g.games.platform }}</span></td>
+      <td>{% if g.achievements_total %}{{ g.achievements_unlocked }}/{{ g.achievements_total }}{% else %}<span class="muted">なし</span>{% endif %}</td>
+      <td>{{ hours(g.playtime_minutes) }} 時間</td>
+      <td>{{ visibility_button(g) }} {{ delete_button(g) }}</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td colspan="4">
+        <details>
+          <summary class="small">編集</summary>
+          <form method="post" action="/manual/{{ g.game_id }}">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <div class="grid" style="margin-top: 8px">
+              <label class="field">名前<input type="text" name="name" value="{{ g.games.name }}" required></label>
+              <label class="field">機種
+                <select name="platform">
+                  {% for p in platforms %}<option {{ "selected" if p == g.games.platform }}>{{ p }}</option>{% endfor %}
+                </select>
+              </label>
+              <label class="field">画像の URL<input type="url" name="image_url" value="{{ g.games.header_image_url or '' }}"></label>
+              <label class="field">実績の数<input type="number" min="0" name="achievements_total" value="{{ g.achievements_total or '' }}"></label>
+              <label class="field">解除した数<input type="number" min="0" name="achievements_unlocked" value="{{ g.achievements_unlocked or '' }}"></label>
+              <label class="field">プレイ時間（時間）<input type="number" step="0.1" min="0" name="playtime_hours" value="{{ hours(g.playtime_minutes) }}"></label>
+            </div>
+            <div class="actions"><button class="primary">更新</button></div>
+          </form>
+        </details>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  </div>
+  {% else %}
+  <p class="muted">まだありません。</p>
+  {% endif %}
+
+  <h2 style="margin-top: 16px">追加</h2>
+  <form method="post" action="/manual">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="grid">
+      <label class="field">名前<input type="text" name="name" required></label>
+      <label class="field">機種
+        <select name="platform">{% for p in platforms %}<option>{{ p }}</option>{% endfor %}</select>
+      </label>
+      <label class="field">画像の URL（任意）<input type="url" name="image_url"></label>
+      <label class="field">実績の数（任意）<input type="number" min="0" name="achievements_total"></label>
+      <label class="field">解除した数（任意）<input type="number" min="0" name="achievements_unlocked"></label>
+      <label class="field">プレイ時間（時間・任意）<input type="number" step="0.1" min="0" name="playtime_hours"></label>
+    </div>
+    <div class="actions">
+      <label class="small"><input type="checkbox" name="is_visible" checked> 公開ページに出す</label>
+      <button class="primary">登録</button>
+    </div>
+  </form>
+</section>
+{% endblock %}
