@@ -83,6 +83,24 @@ def _upsert_owned_games(database: Client, player_id: str, owned: list[OwnedGame]
     return game_ids
 
 
+def _record_playtime_snapshots(
+    database: Client, player_id: str, owned: list[OwnedGame], game_ids: dict[int, int]
+) -> None:
+    """Store today's lifetime playtime per game; day-to-day increases become the activity grid."""
+    today = db.today_jst().isoformat()
+    rows = [
+        {
+            "player_id": player_id,
+            "game_id": game_ids[g.appid],
+            "snapshot_date": today,
+            "playtime_minutes": g.playtime_minutes,
+            "last_played_at": g.last_played_at.isoformat() if g.last_played_at else None,
+        }
+        for g in owned
+    ]
+    db.upsert(database, "playtime_snapshots", rows, on_conflict="player_id,game_id,snapshot_date")
+
+
 def _load_synced_at(database: Client, player_id: str, game_ids: dict[int, int]) -> dict[int, datetime | None]:
     appid_by_game_id = {game_id: appid for appid, game_id in game_ids.items()}
     synced_at: dict[int, datetime | None] = {}
@@ -181,6 +199,7 @@ def sync_steam(settings: Settings, *, full: bool = False, limit: int | None = No
             player_id = upsert_player(database, steam, settings.steam_id)
             owned = steam.get_owned_games(settings.steam_id)
             game_ids = _upsert_owned_games(database, player_id, owned)
+            _record_playtime_snapshots(database, player_id, owned, game_ids)
             result.owned_games = len(owned)
             print(f"Owned games: {len(owned)}")
 
@@ -204,6 +223,9 @@ def sync_steam(settings: Settings, *, full: bool = False, limit: int | None = No
                 result.achievement_games += 1
                 progress = f"{unlocked}/{total}" if total else "no achievements"
                 print(f"  [{i}/{len(targets)}] {game.name}: {progress}")
+
+            # Rebuilt from snapshots and unlock times, so it also picks up achievements synced above.
+            database.rpc("refresh_daily_activity", {"p_player_id": player_id}).execute()
         except Exception as e:
             if player_id is not None:
                 db.record_failure(database, JOB, player_id, f"{type(e).__name__}: {e}")
