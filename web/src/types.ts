@@ -27,6 +27,7 @@ export interface PlayerGame {
   last_played_at: string | null;
   achievements_total: number | null; // null: the game has no achievements
   achievements_unlocked: number | null;
+  started_on: string | null; // YYYY-MM-DD, typed in the admin
 }
 
 export interface Activity {

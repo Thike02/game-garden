@@ -35,6 +35,18 @@ function compare(sort: SortKey) {
   };
 }
 
+function PlayLine({ owned }: { owned: PlayerGame }) {
+  const parts: string[] = [];
+  // Hand-entered games often have no playtime; don't show "0.0 時間" for them.
+  if (owned.playtime_minutes !== null && (owned.source === "steam" || owned.playtime_minutes > 0)) {
+    parts.push(`${(owned.playtime_minutes / 60).toFixed(1)} 時間`);
+  }
+  if (owned.last_played_at) {
+    parts.push(`最後に遊んだ日 ${formatJst(owned.last_played_at, { year: "numeric", month: "numeric", day: "numeric" })}`);
+  }
+  return parts.length ? <span className="muted small">{parts.join(" ・ ")}</span> : null;
+}
+
 function Summary({ owned, game }: { owned: PlayerGame; game: Game }) {
   const total = owned.achievements_total ?? 0;
   const done = owned.achievements_unlocked ?? 0;
@@ -135,12 +147,9 @@ export function GameList({ games, playerGames, unlocked, showPlaytime }: Props) 
                   </span>
                 </div>
               )}
-              {showPlaytime && owned.playtime_minutes !== null && (owned.source === "steam" || owned.playtime_minutes > 0) && (
-                <span className="muted small">
-                  {(owned.playtime_minutes / 60).toFixed(1)} 時間
-                  {owned.last_played_at &&
-                    ` ・ 最後に遊んだ日 ${formatJst(owned.last_played_at, { year: "numeric", month: "numeric", day: "numeric" })}`}
-                </span>
+              {owned.started_on && <span className="muted small">{owned.started_on.replaceAll("-", "/")} から遊んでいます</span>}
+              {showPlaytime && (
+                <PlayLine owned={owned} />
               )}
             </div>
             </div>

@@ -60,7 +60,7 @@ export async function loadGarden(player: Player): Promise<GardenData> {
     fetchAll<PlayerGame>((from, to) =>
       db
         .from("player_games")
-        .select("game_id, source, playtime_minutes, last_played_at, achievements_total, achievements_unlocked")
+        .select("game_id, source, playtime_minutes, last_played_at, achievements_total, achievements_unlocked, started_on")
         .eq("player_id", player.id)
         .order("game_id")
         .range(from, to),
