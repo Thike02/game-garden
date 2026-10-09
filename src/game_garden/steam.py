@@ -42,6 +42,7 @@ class OwnedGame:
     name: str
     playtime_minutes: int
     last_played_at: datetime | None
+    playtime_2weeks: int = 0
 
     @property
     def header_image_url(self) -> str:
@@ -197,6 +198,7 @@ class SteamClient:
                 name=g.get("name") or f"App {g['appid']}",
                 playtime_minutes=g.get("playtime_forever", 0),
                 last_played_at=_from_unix(g.get("rtime_last_played")),
+                playtime_2weeks=g.get("playtime_2weeks", 0),
             )
             for g in response["games"]
         ]

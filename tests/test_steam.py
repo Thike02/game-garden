@@ -23,7 +23,7 @@ def test_owned_games_parsed():
                 "response": {
                     "game_count": 2,
                     "games": [
-                        {"appid": 10, "name": "Counter-Strike", "playtime_forever": 120, "rtime_last_played": 1700000000},
+                        {"appid": 10, "name": "Counter-Strike", "playtime_forever": 120, "playtime_2weeks": 30, "rtime_last_played": 1700000000},
                         {"appid": 20, "name": "Never Played", "playtime_forever": 0, "rtime_last_played": 0},
                     ],
                 }
@@ -35,6 +35,7 @@ def test_owned_games_parsed():
     assert games[0].playtime_minutes == 120
     assert games[0].last_played_at == datetime.fromtimestamp(1700000000, tz=UTC)
     assert games[1].last_played_at is None
+    assert (games[0].playtime_2weeks, games[1].playtime_2weeks) == (30, 0)
     assert games[0].header_image_url.endswith("/apps/10/header.jpg")
 
 
