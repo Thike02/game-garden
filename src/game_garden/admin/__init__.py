@@ -287,7 +287,7 @@ def create_app() -> FastAPI:
         if _missing(settings):
             return RedirectResponse("/setup", status_code=303)
         database, player_id = player(settings)
-        return page(request, "tags.html", tags=tags.list_tags(database, player_id))
+        return page(request, "tags.html", tags=tags.list_tags(database, player_id), tag=None)
 
     @app.post("/tags", dependencies=[Depends(check_csrf)])
     def tag_create(name: str = Form(...), color: str = Form(...), is_public: str | None = Form(None)):
@@ -305,9 +305,10 @@ def create_app() -> FastAPI:
             tag = tags.get_tag(database, player_id, tag_id)
         except tags.TagError as e:
             return _back("/tags", error=str(e))
+        # Same page as /tags, with this tag's editor and game checklist below the list.
         return page(
-            request, "tag.html", tag=tag, games=tags.list_games(database, player_id),
-            tagged=tags.tagged_game_ids(database, tag_id),
+            request, "tags.html", tags=tags.list_tags(database, player_id), tag=tag,
+            games=tags.list_games(database, player_id), tagged=tags.tagged_game_ids(database, tag_id),
         )
 
     @app.post("/tags/{tag_id}", dependencies=[Depends(check_csrf)])

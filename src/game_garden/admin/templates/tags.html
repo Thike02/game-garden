@@ -2,26 +2,21 @@
 {% block content %}
 <section>
   <h1>タグ</h1>
-  <p class="muted small">ゲームに自由にタグを付けられます。「公開しない」にしたタグは、公開ページにも API にも出ません。</p>
+  <p class="muted small">ゲームに自由にタグを付けられます。タグを押すと、下で編集とゲームの選択ができます。「公開しない」にしたタグは、公開ページにも API にも出ません。</p>
   {% if tags %}
-  <table>
-    <tr><th>タグ</th><th>ゲーム</th><th>公開ページ</th><th></th></tr>
+  <div class="actions" style="margin-top: 0">
     {% for t in tags %}
-    <tr>
-      <td><span class="tag tag-{{ t.color }}">{{ t.name }}</span></td>
-      <td>{{ t.games }} 本</td>
-      <td class="small">{{ "🌐 公開" if t.is_public else "🔒 公開しない" }}</td>
-      <td><a href="/tags/{{ t.id }}">編集・ゲームを選ぶ</a></td>
-    </tr>
+    <a class="tag tag-{{ t.color }}{{ ' selected' if tag and t.id == tag.id }}" href="/tags/{{ t.id }}"
+       style="text-decoration: none; padding: 2px 12px">
+      {{ "🔒 " if not t.is_public }}{{ t.name }} <span class="muted">{{ t.games }}本</span>
+    </a>
     {% endfor %}
-  </table>
+  </div>
   {% else %}
   <p class="muted">まだタグがありません。</p>
   {% endif %}
-</section>
 
-<section>
-  <h2>タグを作る</h2>
+  <h2 style="margin-top: 16px">タグを作る</h2>
   <form method="post" action="/tags">
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <div class="grid">
@@ -38,4 +33,77 @@
     </div>
   </form>
 </section>
+
+{% if tag %}
+<section>
+  <h2><span class="tag tag-{{ tag.color }}" style="font-size: 1rem">{{ tag.name }}</span> の編集</h2>
+  <form method="post" action="/tags/{{ tag.id }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="grid">
+      <label class="field">名前<input type="text" name="name" maxlength="30" value="{{ tag.name }}" required></label>
+      <label class="field">色
+        <select name="color">
+          {% for c in tag_colors %}<option value="{{ c }}" {{ "selected" if c == tag.color }}>{{ tag_color_labels[c] }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="field">並び順（小さいほど前）<input type="number" name="sort_order" value="{{ tag.sort_order }}"></label>
+    </div>
+    <div class="actions">
+      <label class="small"><input type="checkbox" name="is_public" {{ "checked" if tag.is_public }}> 公開ページに出す</label>
+      <button class="primary">更新</button>
+    </div>
+  </form>
+  <form method="post" action="/tags/{{ tag.id }}/delete" class="actions"
+        onsubmit='return confirm({{ ("「" ~ tag.name ~ "」を削除しますか？ゲームからも外れます") | tojson }})'>
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="danger small">このタグを削除</button>
+  </form>
+</section>
+
+<section>
+  <h2>付けるゲーム</h2>
+  <form method="post" action="/tags/{{ tag.id }}/games">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="actions" style="margin-top: 0">
+      <input type="text" id="filter" placeholder="ゲーム名で絞り込み" style="max-width: 280px" autocomplete="off">
+      <label class="small"><input type="checkbox" id="only-checked"> 付けたものだけ表示</label>
+      <span class="muted small"><span id="count">{{ tagged | length }}</span> 本に付いています</span>
+      <button class="primary">保存</button>
+    </div>
+    <div class="table-scroll">
+    <table id="games">
+      {% for g in games %}
+      <tr data-name="{{ g.games.name | lower }}">
+        <td style="width: 2em"><input type="checkbox" name="game_id" value="{{ g.game_id }}" id="g{{ g.game_id }}" {{ "checked" if g.game_id in tagged }}></td>
+        <td style="width: 100px">{% if g.games.header_image_url %}<img class="thumb" src="{{ g.games.header_image_url }}" alt="" loading="lazy">{% endif %}</td>
+        <td><label for="g{{ g.game_id }}">{{ g.games.name }}</label>
+          {% if g.source != "steam" %}<span class="badge muted">{{ g.games.platform if g.source == "manual" else "一覧に出ない Steam ゲーム" }}</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    </div>
+    <div class="actions"><button class="primary">保存</button></div>
+  </form>
+</section>
+
+<script>
+  // Filtering only hides rows; hidden checkboxes are still submitted.
+  const filter = document.getElementById("filter");
+  const onlyChecked = document.getElementById("only-checked");
+  const rows = [...document.querySelectorAll("#games tr")];
+  const count = document.getElementById("count");
+  function apply() {
+    const q = filter.value.trim().toLowerCase();
+    for (const row of rows) {
+      const checked = row.querySelector("input").checked;
+      row.hidden = (q && !row.dataset.name.includes(q)) || (onlyChecked.checked && !checked);
+    }
+    count.textContent = rows.filter((r) => r.querySelector("input").checked).length;
+  }
+  filter.addEventListener("input", apply);
+  onlyChecked.addEventListener("change", apply);
+  document.getElementById("games").addEventListener("change", apply);
+</script>
+{% endif %}
 {% endblock %}
