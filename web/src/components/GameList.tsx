@@ -46,7 +46,8 @@ function PlayLine({ owned }: { owned: PlayerGame }) {
   if (owned.last_played_at) {
     parts.push(`最後に遊んだ日 ${formatJst(owned.last_played_at, { year: "numeric", month: "numeric", day: "numeric" })}`);
   }
-  return parts.length ? <span className="muted small">{parts.join(" ・ ")}</span> : null;
+  // An empty line still takes its space, keeping card heights equal.
+  return <span className="play-line muted small">{parts.length ? parts.join(" ・ ") : " "}</span>;
 }
 
 function Summary({ owned, game }: { owned: PlayerGame; game: Game }) {
@@ -152,19 +153,18 @@ export function GameList({ games, playerGames, unlocked, tags, gameTags, showPla
               >
                 {game.name}
               </a>
-              {(owned.source === "manual" || gameTags.has(game.id)) && (
-                <span className="chips">
-                  {owned.source === "manual" && <span className="platform-chip small">{game.platform}</span>}
-                  {(gameTags.get(game.id) ?? [])
-                    .map((id) => tagById.get(id))
-                    .filter((t): t is Tag => t !== undefined)
-                    .map((t) => (
-                      <span key={t.id} className={`tag-chip small tag-${t.color}`}>
-                        {t.name}
-                      </span>
-                    ))}
-                </span>
-              )}
+              {/* Always rendered (one line, even when empty) so every card has the same height. */}
+              <span className="chips">
+                {owned.source === "manual" && <span className="platform-chip small">{game.platform}</span>}
+                {(gameTags.get(game.id) ?? [])
+                  .map((id) => tagById.get(id))
+                  .filter((t): t is Tag => t !== undefined)
+                  .map((t) => (
+                    <span key={t.id} className={`tag-chip small tag-${t.color}`}>
+                      {t.name}
+                    </span>
+                  ))}
+              </span>
               {progress === null ? (
                 <span className="muted small">実績なし</span>
               ) : (
@@ -177,10 +177,6 @@ export function GameList({ games, playerGames, unlocked, tags, gameTags, showPla
                     {progress === 1 && " ✨"}
                   </span>
                 </div>
-              )}
-              {/* Kept in the data for Steam games too (e.g. a game moved to Steam), but only shown for the others. */}
-              {owned.started_on && owned.source !== "steam" && (
-                <span className="muted small">{owned.started_on.replaceAll("-", "/")} から遊んでいます</span>
               )}
               {showPlaytime && (
                 <PlayLine owned={owned} />

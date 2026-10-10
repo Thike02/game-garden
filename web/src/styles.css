@@ -520,8 +520,22 @@ select,
 
 .chips {
   display: flex;
-  flex-wrap: wrap;
   gap: 4px;
+  min-height: 1.5rem; /* reserved even without tags, so cards line up */
+  overflow: hidden; /* one line only; extra tags are cut off rather than growing the card */
+  align-items: center;
+}
+
+.chips > * {
+  flex: none;
+}
+
+/* One line on every card, also on phones, so cards keep the same height. */
+.play-line,
+.game-body .progress-row {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tag-filter {
@@ -562,7 +576,6 @@ button.tag-chip[aria-pressed="true"] {
 .tag-gray { --c: var(--tag-gray); }
 
 .platform-chip {
-  align-self: flex-start;
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 0 8px;
