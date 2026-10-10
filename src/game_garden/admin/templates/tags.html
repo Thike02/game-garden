@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}タグ{% endblock %}
+{% block content %}
+<section>
+  <h1>タグ</h1>
+  <p class="muted small">ゲームに自由にタグを付けられます。「公開しない」にしたタグは、公開ページにも API にも出ません。</p>
+  {% if tags %}
+  <table>
+    <tr><th>タグ</th><th>ゲーム</th><th>公開ページ</th><th></th></tr>
+    {% for t in tags %}
+    <tr>
+      <td><span class="tag tag-{{ t.color }}">{{ t.name }}</span></td>
+      <td>{{ t.games }} 本</td>
+      <td class="small">{{ "🌐 公開" if t.is_public else "🔒 公開しない" }}</td>
+      <td><a href="/tags/{{ t.id }}">編集・ゲームを選ぶ</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="muted">まだタグがありません。</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>タグを作る</h2>
+  <form method="post" action="/tags">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="grid">
+      <label class="field">名前<input type="text" name="name" maxlength="30" required placeholder="ストーリークリア"></label>
+      <label class="field">色
+        <select name="color">
+          {% for c in tag_colors %}<option value="{{ c }}">{{ tag_color_labels[c] }}</option>{% endfor %}
+        </select>
+      </label>
+    </div>
+    <div class="actions">
+      <label class="small"><input type="checkbox" name="is_public" checked> 公開ページに出す</label>
+      <button class="primary">作る</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -16,7 +16,7 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Upload
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from game_garden import db, library
+from game_garden import db, library, tags
 from game_garden.config import Settings, load_settings
 from game_garden.env_file import update_env_file
 from game_garden.images import ImageError, upload_game_image
@@ -85,6 +85,8 @@ def create_app() -> FastAPI:
     templates.env.globals["csrf"] = csrf_token
     templates.env.globals["platforms"] = library.PLATFORMS
     templates.env.globals["jst_date"] = _jst_date
+    templates.env.globals["tag_colors"] = tags.COLORS
+    templates.env.globals["tag_color_labels"] = tags.COLOR_LABELS
 
     @app.middleware("http")
     async def local_only(request: Request, call_next):
@@ -271,6 +273,76 @@ def create_app() -> FastAPI:
         except library.LibraryError as e:
             return _back("/", error=str(e))
         return _back("/", "削除しました")
+
+    # ---------------------------------------------------------------- tags
+
+    def player(settings: Settings) -> tuple:
+        database, steam = clients(settings)
+        with steam:
+            return database, library.get_player_id(database, steam, settings)
+
+    @app.get("/tags", response_class=HTMLResponse)
+    def tag_list(request: Request):
+        settings = _settings()
+        if _missing(settings):
+            return RedirectResponse("/setup", status_code=303)
+        database, player_id = player(settings)
+        return page(request, "tags.html", tags=tags.list_tags(database, player_id))
+
+    @app.post("/tags", dependencies=[Depends(check_csrf)])
+    def tag_create(name: str = Form(...), color: str = Form(...), is_public: str | None = Form(None)):
+        database, player_id = player(_settings())
+        try:
+            tag_id = tags.create_tag(database, player_id, name=name, color=color, is_public=is_public == "on")
+        except tags.TagError as e:
+            return _back("/tags", error=str(e))
+        return _back(f"/tags/{tag_id}", f"「{name.strip()}」を作りました。付けるゲームを選んでください")
+
+    @app.get("/tags/{tag_id}", response_class=HTMLResponse)
+    def tag_edit(request: Request, tag_id: int):
+        database, player_id = player(_settings())
+        try:
+            tag = tags.get_tag(database, player_id, tag_id)
+        except tags.TagError as e:
+            return _back("/tags", error=str(e))
+        return page(
+            request, "tag.html", tag=tag, games=tags.list_games(database, player_id),
+            tagged=tags.tagged_game_ids(database, tag_id),
+        )
+
+    @app.post("/tags/{tag_id}", dependencies=[Depends(check_csrf)])
+    def tag_update(
+        tag_id: int, name: str = Form(...), color: str = Form(...), sort_order: int = Form(0),
+        is_public: str | None = Form(None),
+    ):
+        database, player_id = player(_settings())
+        try:
+            tags.update_tag(
+                database, player_id, tag_id, name=name, color=color, is_public=is_public == "on", sort_order=sort_order
+            )
+        except tags.TagError as e:
+            return _back(f"/tags/{tag_id}", error=str(e))
+        return _back(f"/tags/{tag_id}", "タグを更新しました")
+
+    @app.post("/tags/{tag_id}/games", dependencies=[Depends(check_csrf)])
+    async def tag_games(request: Request, tag_id: int):
+        form = await request.form()
+        game_ids = [int(v) for v in form.getlist("game_id")]
+        database, player_id = player(_settings())
+        try:
+            added, removed = tags.set_tag_games(database, player_id, tag_id, game_ids)
+        except tags.TagError as e:
+            return _back("/tags", error=str(e))
+        return _back(f"/tags/{tag_id}", f"保存しました（{added} 本に付けて、{removed} 本から外しました）")
+
+    @app.post("/tags/{tag_id}/delete", dependencies=[Depends(check_csrf)])
+    def tag_delete(tag_id: int):
+        database, player_id = player(_settings())
+        try:
+            name = tags.delete_tag(database, player_id, tag_id)
+        except tags.TagError as e:
+            return _back("/tags", error=str(e))
+        return _back("/tags", f"「{name}」を削除しました")
 
     # ---------------------------------------------------------------- candidates
 

@@ -51,6 +51,14 @@
     .ok { color: var(--ok); } .bad { color: var(--bad); }
     .badge { font-size: .75rem; border: 1px solid currentColor; border-radius: 999px; padding: 0 8px; white-space: nowrap; }
     details summary { cursor: pointer; color: var(--accent); }
+    /* tag palette: same names as game_garden.tags.COLORS and the web page */
+    .tag { display: inline-block; border-radius: 999px; padding: 0 10px; font-size: .8rem; border: 1px solid currentColor; white-space: nowrap; }
+    .tag-blue { color: #66c0f4; } .tag-green { color: #8bc34a; } .tag-yellow { color: #e5b143; } .tag-orange { color: #f0883e; }
+    .tag-red { color: #ff7b72; } .tag-pink { color: #f778ba; } .tag-purple { color: #b383ff; } .tag-gray { color: #9aa5b1; }
+    @media (prefers-color-scheme: light) {
+      .tag-blue { color: #1a73b8; } .tag-green { color: #3d7d1a; } .tag-yellow { color: #9a6b00; } .tag-orange { color: #b85412; }
+      .tag-red { color: #c62828; } .tag-pink { color: #b0306e; } .tag-purple { color: #6f42c1; } .tag-gray { color: #5d6b78; }
+    }
     .table-scroll { overflow-x: auto; }
   </style>
 </head>
@@ -58,6 +66,7 @@
   <header>
     <span class="brand">🌱 Game Garden 管理画面</span>
     <a href="/">ゲーム</a>
+    <a href="/tags">タグ</a>
     <a href="/candidates">候補を探す</a>
     <a href="/setup">設定</a>
   </header>
