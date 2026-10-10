@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+<p><a href="/tags">← タグ一覧に戻る</a></p>
+
+<form method="post" action="/tags/{{ tag.id }}">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <section>
+    <h1><span class="tag tag-{{ tag.color }}" style="font-size: 1rem">{{ tag.name }}</span> の編集</h1>
+    <div class="grid">
+      <label class="field">名前<input type="text" name="name" maxlength="30" value="{{ tag.name }}" required></label>
+      <label class="field">色
+        <select name="color">
+          {% for c in tag_colors %}<option value="{{ c }}" {{ "selected" if c == tag.color }}>{{ tag_color_labels[c] }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="field">並び順（小さいほど前）<input type="number" name="sort_order" value="{{ tag.sort_order }}"></label>
+    </div>
+    <div class="actions">
+      <label class="small"><input type="checkbox" name="is_public" {{ "checked" if tag.is_public }}> 公開ページに出す</label>
+    </div>
+  </section>
+
+  <section>
+    <h2>付けるゲーム</h2>
+    <div class="actions" style="margin-top: 0">
+      <input type="text" id="filter" placeholder="ゲーム名で絞り込み" style="max-width: 280px" autocomplete="off">
+      <label class="small"><input type="checkbox" id="only-checked"> 付けたものだけ表示</label>
+      <span class="muted small"><span id="count">{{ tagged | length }}</span> 本に付いています</span>
+    </div>
+    <div class="table-scroll">
+    <table id="games">
+      {% for g in games %}
+      <tr data-name="{{ g.games.name | lower }}">
+        <td style="width: 2em"><input type="checkbox" name="game_id" value="{{ g.game_id }}" id="g{{ g.game_id }}" {{ "checked" if g.game_id in tagged }}></td>
+        <td style="width: 100px">{% if g.games.header_image_url %}<img class="thumb" src="{{ g.games.header_image_url }}" alt="" loading="lazy">{% endif %}</td>
+        <td><label for="g{{ g.game_id }}">{{ g.games.name }}</label>
+          {% if g.source != "steam" %}<span class="badge muted">{{ g.games.platform if g.source == "manual" else "一覧に出ない Steam ゲーム" }}</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    </div>
+  </section>
+
+  <div class="actions" style="position: sticky; bottom: 0; background: var(--bg); padding: 12px 0">
+    <button class="primary">保存してタグ一覧に戻る</button>
+    <a href="/tags">保存しないで戻る</a>
+  </div>
+</form>
+
+<section>
+  <form method="post" action="/tags/{{ tag.id }}/delete"
+        onsubmit='return confirm({{ ("「" ~ tag.name ~ "」を削除しますか？ゲームからも外れます") | tojson }})'>
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="danger small">このタグを削除</button>
+  </form>
+</section>
+
+<script>
+  // Filtering only hides rows; hidden checkboxes are still submitted.
+  const filter = document.getElementById("filter");
+  const onlyChecked = document.getElementById("only-checked");
+  const rows = [...document.querySelectorAll("#games tr")];
+  const count = document.getElementById("count");
+  function apply() {
+    const q = filter.value.trim().toLowerCase();
+    for (const row of rows) {
+      const checked = row.querySelector("input").checked;
+      row.hidden = (q && !row.dataset.name.includes(q)) || (onlyChecked.checked && !checked);
+    }
+    count.textContent = rows.filter((r) => r.querySelector("input").checked).length;
+  }
+  filter.addEventListener("input", apply);
+  onlyChecked.addEventListener("change", apply);
+  document.getElementById("games").addEventListener("change", apply);
+  // Enter in the filter box would submit the whole form; keep it for filtering.
+  filter.addEventListener("keydown", (e) => e.key === "Enter" && e.preventDefault());
+</script>
+{% endblock %}

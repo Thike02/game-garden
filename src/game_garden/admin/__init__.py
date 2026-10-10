@@ -287,7 +287,7 @@ def create_app() -> FastAPI:
         if _missing(settings):
             return RedirectResponse("/setup", status_code=303)
         database, player_id = player(settings)
-        return page(request, "tags.html", tags=tags.list_tags(database, player_id), tag=None)
+        return page(request, "tags.html", tags=tags.list_tags(database, player_id))
 
     @app.post("/tags", dependencies=[Depends(check_csrf)])
     def tag_create(name: str = Form(...), color: str = Form(...), is_public: str | None = Form(None)):
@@ -305,36 +305,27 @@ def create_app() -> FastAPI:
             tag = tags.get_tag(database, player_id, tag_id)
         except tags.TagError as e:
             return _back("/tags", error=str(e))
-        # Same page as /tags, with this tag's editor and game checklist below the list.
         return page(
-            request, "tags.html", tags=tags.list_tags(database, player_id), tag=tag,
-            games=tags.list_games(database, player_id), tagged=tags.tagged_game_ids(database, tag_id),
+            request, "tag.html", tag=tag, games=tags.list_games(database, player_id),
+            tagged=tags.tagged_game_ids(database, tag_id),
         )
 
     @app.post("/tags/{tag_id}", dependencies=[Depends(check_csrf)])
-    def tag_update(
-        tag_id: int, name: str = Form(...), color: str = Form(...), sort_order: int = Form(0),
-        is_public: str | None = Form(None),
-    ):
+    async def tag_save(request: Request, tag_id: int):
+        """Tag settings and its games are one form; saving returns to the tag list."""
+        form = await request.form()
         database, player_id = player(_settings())
         try:
             tags.update_tag(
-                database, player_id, tag_id, name=name, color=color, is_public=is_public == "on", sort_order=sort_order
+                database, player_id, tag_id,
+                name=str(form.get("name", "")), color=str(form.get("color", "")),
+                is_public=form.get("is_public") == "on", sort_order=int(form.get("sort_order") or 0),
             )
-        except tags.TagError as e:
+            added, removed = tags.set_tag_games(database, player_id, tag_id, [int(v) for v in form.getlist("game_id")])
+        except (tags.TagError, ValueError) as e:
             return _back(f"/tags/{tag_id}", error=str(e))
-        return _back(f"/tags/{tag_id}", "タグを更新しました")
-
-    @app.post("/tags/{tag_id}/games", dependencies=[Depends(check_csrf)])
-    async def tag_games(request: Request, tag_id: int):
-        form = await request.form()
-        game_ids = [int(v) for v in form.getlist("game_id")]
-        database, player_id = player(_settings())
-        try:
-            added, removed = tags.set_tag_games(database, player_id, tag_id, game_ids)
-        except tags.TagError as e:
-            return _back("/tags", error=str(e))
-        return _back(f"/tags/{tag_id}", f"保存しました（{added} 本に付けて、{removed} 本から外しました）")
+        name = str(form.get("name", "")).strip()
+        return _back("/tags", f"「{name}」を保存しました（{added} 本に付けて、{removed} 本から外しました）")
 
     @app.post("/tags/{tag_id}/delete", dependencies=[Depends(check_csrf)])
     def tag_delete(tag_id: int):
