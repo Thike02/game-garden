@@ -8,6 +8,7 @@ import type {
   Player,
   PlayerGame,
   PriceRow,
+  Tag,
   WishlistItem,
 } from "./types.ts";
 
@@ -49,7 +50,7 @@ export async function loadPlayers(): Promise<Player[]> {
 
 export async function loadGarden(player: Player): Promise<GardenData> {
   const db = client();
-  const [games, playerGames, activity, unlocked, wishlist] = await Promise.all([
+  const [games, playerGames, activity, unlocked, wishlist, tags, gameTagRows] = await Promise.all([
     fetchAll<Game>((from, to) =>
       db
         .from("games")
@@ -93,7 +94,16 @@ export async function loadGarden(player: Player): Promise<GardenData> {
             .range(from, to),
         )
       : Promise.resolve([]),
+    fetchAll<Tag>((from, to) =>
+      db.from("tags").select("id, name, color").eq("player_id", player.id).order("sort_order").order("name").range(from, to),
+    ),
+    fetchAll<{ game_id: number; tag_id: number }>((from, to) =>
+      db.from("game_tags").select("game_id, tag_id").eq("player_id", player.id).order("tag_id").range(from, to),
+    ),
   ]);
+
+  const gameTags = new Map<number, number[]>();
+  for (const row of gameTagRows) gameTags.set(row.game_id, [...(gameTags.get(row.game_id) ?? []), row.tag_id]);
 
   const wishlistIds = wishlist.map((w) => w.game_id);
   const priceRows = wishlistIds.length
@@ -123,6 +133,8 @@ export async function loadGarden(player: Player): Promise<GardenData> {
     unlocked,
     wishlist,
     prices,
+    tags,
+    gameTags,
   };
 }
 

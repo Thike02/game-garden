@@ -20,6 +20,15 @@
   --cell-2: #006d32;
   --cell-3: #26a641;
   --cell-4: #39d353;
+  /* tag palette (names match game_garden.tags.COLORS) */
+  --tag-blue: #66c0f4;
+  --tag-green: #8bc34a;
+  --tag-yellow: #e5b143;
+  --tag-orange: #f0883e;
+  --tag-red: #ff7b72;
+  --tag-pink: #f778ba;
+  --tag-purple: #b383ff;
+  --tag-gray: #9aa5b1;
   color-scheme: dark;
 }
 
@@ -45,6 +54,14 @@
     --cell-2: #40c463;
     --cell-3: #30a14e;
     --cell-4: #216e39;
+    --tag-blue: #1a73b8;
+    --tag-green: #3d7d1a;
+    --tag-yellow: #9a6b00;
+    --tag-orange: #b85412;
+    --tag-red: #c62828;
+    --tag-pink: #b0306e;
+    --tag-purple: #6f42c1;
+    --tag-gray: #5d6b78;
     color-scheme: light;
   }
 }
@@ -70,6 +87,14 @@
   --cell-2: #40c463;
   --cell-3: #30a14e;
   --cell-4: #216e39;
+  --tag-blue: #1a73b8;
+  --tag-green: #3d7d1a;
+  --tag-yellow: #9a6b00;
+  --tag-orange: #b85412;
+  --tag-red: #c62828;
+  --tag-pink: #b0306e;
+  --tag-purple: #6f42c1;
+  --tag-gray: #5d6b78;
   color-scheme: light;
 }
 
@@ -492,6 +517,49 @@ select,
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tag-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.tag-chip {
+  --c: var(--tag-gray);
+  color: var(--c);
+  border: 1px solid var(--c);
+  border-radius: 999px;
+  padding: 0 10px;
+  background: none;
+  white-space: nowrap;
+}
+
+button.tag-chip {
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 2px 12px;
+}
+
+button.tag-chip[aria-pressed="true"] {
+  background: var(--c);
+  color: var(--panel);
+}
+
+.tag-blue { --c: var(--tag-blue); }
+.tag-green { --c: var(--tag-green); }
+.tag-yellow { --c: var(--tag-yellow); }
+.tag-orange { --c: var(--tag-orange); }
+.tag-red { --c: var(--tag-red); }
+.tag-pink { --c: var(--tag-pink); }
+.tag-purple { --c: var(--tag-purple); }
+.tag-gray { --c: var(--tag-gray); }
 
 .platform-chip {
   align-self: flex-start;

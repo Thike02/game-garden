@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { formatJst } from "../dates.ts";
-import type { Badge, Game, PlayerGame } from "../types.ts";
+import type { Badge, Game, PlayerGame, Tag } from "../types.ts";
 import { GameAchievements } from "./GameAchievements.tsx";
 import { HoverCard } from "./HoverCard.tsx";
 import { GameImage } from "./GameImage.tsx";
@@ -11,6 +11,8 @@ interface Props {
   games: Map<number, Game>;
   playerGames: PlayerGame[];
   unlocked: Badge[];
+  tags: Tag[];
+  gameTags: Map<number, number[]>;
   showPlaytime: boolean;
 }
 
@@ -66,8 +68,10 @@ function Summary({ owned, game }: { owned: PlayerGame; game: Game }) {
   );
 }
 
-export function GameList({ games, playerGames, unlocked, showPlaytime }: Props) {
+export function GameList({ games, playerGames, unlocked, tags, gameTags, showPlaytime }: Props) {
   const [open, setOpen] = useState<number | null>(null);
+  const [tagFilter, setTagFilter] = useState<number | null>(null);
+  const tagById = useMemo(() => new Map(tags.map((t) => [t.id, t])), [tags]);
   const unlockedByGame = useMemo(() => {
     const map = new Map<number, Badge[]>();
     for (const a of unlocked) map.set(a.game_id, [...(map.get(a.game_id) ?? []), a]);
@@ -84,10 +88,11 @@ export function GameList({ games, playerGames, unlocked, showPlaytime }: Props) 
       const total = owned.achievements_total ?? 0;
       const progress = total > 0 ? (owned.achievements_unlocked ?? 0) / total : null;
       if (onlyAchievements && progress === null) continue;
+      if (tagFilter !== null && !(gameTags.get(game.id) ?? []).includes(tagFilter)) continue;
       list.push({ game, owned, progress });
     }
     return list.sort(compare(sort));
-  }, [games, playerGames, sort, onlyAchievements]);
+  }, [games, playerGames, sort, onlyAchievements, tagFilter, gameTags]);
 
   return (
     <section className="panel">
@@ -106,6 +111,20 @@ export function GameList({ games, playerGames, unlocked, showPlaytime }: Props) 
           </select>
         </div>
       </div>
+      {tags.length > 0 && (
+        <div className="tag-filter" role="group" aria-label="タグで絞り込み">
+          {tags.map((t) => (
+            <button
+              key={t.id}
+              className={`tag-chip tag-${t.color}`}
+              aria-pressed={tagFilter === t.id}
+              onClick={() => setTagFilter(tagFilter === t.id ? null : t.id)}
+            >
+              {t.name}
+            </button>
+          ))}
+        </div>
+      )}
       <ul className="games">
         {rows.map(({ game, owned, progress }) => {
           const expanded = open === game.id;
@@ -133,7 +152,19 @@ export function GameList({ games, playerGames, unlocked, showPlaytime }: Props) 
               >
                 {game.name}
               </a>
-              {owned.source === "manual" && <span className="platform-chip small">{game.platform}</span>}
+              {(owned.source === "manual" || gameTags.has(game.id)) && (
+                <span className="chips">
+                  {owned.source === "manual" && <span className="platform-chip small">{game.platform}</span>}
+                  {(gameTags.get(game.id) ?? [])
+                    .map((id) => tagById.get(id))
+                    .filter((t): t is Tag => t !== undefined)
+                    .map((t) => (
+                      <span key={t.id} className={`tag-chip small tag-${t.color}`}>
+                        {t.name}
+                      </span>
+                    ))}
+                </span>
+              )}
               {progress === null ? (
                 <span className="muted small">実績なし</span>
               ) : (

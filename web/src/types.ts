@@ -74,6 +74,12 @@ export interface PriceRow {
   sale_ends_at: string | null;
 }
 
+export interface Tag {
+  id: number;
+  name: string;
+  color: string; // palette name, see --tag-* in styles.css
+}
+
 export interface GardenData {
   games: Map<number, Game>;
   playerGames: PlayerGame[];
@@ -81,4 +87,6 @@ export interface GardenData {
   unlocked: Badge[]; // every unlocked achievement, rarest first
   wishlist: WishlistItem[];
   prices: Map<number, PriceRow[]>; // per game, oldest first
+  tags: Tag[]; // public tags, display order
+  gameTags: Map<number, number[]>; // game id -> tag ids
 }

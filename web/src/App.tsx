@@ -63,6 +63,8 @@ export function App() {
           games={data.games}
           playerGames={data.playerGames}
           unlocked={data.unlocked}
+          tags={data.tags}
+          gameTags={data.gameTags}
           showPlaytime={player.show_playtime}
         />
         {player.show_wishlist && <Wishlist games={data.games} wishlist={data.wishlist} prices={data.prices} />}
