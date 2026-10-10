@@ -69,18 +69,21 @@ export function Wishlist({ games, wishlist, prices }: Props) {
               <button className="wish-row" aria-expanded={expanded} onClick={() => setOpen(expanded ? null : game.id)}>
                 <GameImage src={game.header_image_url} width={120} height={45} />
                 <span className="wish-name">{game.name}</span>
-                <span className="wish-price">
-                  {current ? (
-                    <>
-                      {onSaleNow && <s className="muted small">{formatPrice(current.regular_price, current.currency)}</s>}
-                      <strong>{formatPrice(current.price, current.currency)}</strong>
-                      {onSaleNow && <span className="discount">-{current.discount_pct}%</span>}
-                    </>
-                  ) : (
-                    <span className="muted small">価格なし</span>
-                  )}
+                {/* Badges sit left of the price so every price lines up on the right edge. */}
+                <span className="wish-tail">
+                  {isLow && <span className="low-chip small">🏆 最安値</span>}
+                  {onSaleNow && <span className="discount">-{current.discount_pct}%</span>}
+                  <span className="wish-price">
+                    {current ? (
+                      <>
+                        {onSaleNow && <s className="muted small">{formatPrice(current.regular_price, current.currency)}</s>}
+                        <strong>{formatPrice(current.price, current.currency)}</strong>
+                      </>
+                    ) : (
+                      <span className="muted small">価格なし</span>
+                    )}
+                  </span>
                 </span>
-                {isLow && <span className="low-chip small">🏆 最安値</span>}
               </button>
               {expanded && (
                 <div className="wish-detail">
