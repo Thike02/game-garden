@@ -76,7 +76,7 @@ uv run pytest
 
 ## 定期実行（GitHub Actions）
 
-[.github/workflows/daily.yml](.github/workflows/daily.yml) が毎朝4時（日本時間）に `sync-steam` → `sync-wishlist` → `notify-sales` を実行します。どれかが失敗しても残りは実行し、最後に失敗したものを Discord に知らせます。Actions のページから手動でも実行できます。
+[.github/workflows/daily.yml](.github/workflows/daily.yml) が毎朝4時17分（日本時間）ごろに `sync-steam` → `sync-wishlist` → `notify-sales` を実行します。どれかが失敗しても残りは実行し、最後に失敗したものを Discord に知らせます。Actions のページから手動でも実行できます。
 
 リポジトリの Settings > Secrets and variables > Actions に、次の Secrets を登録してください。
 

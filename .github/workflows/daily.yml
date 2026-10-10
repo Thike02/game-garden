@@ -2,8 +2,9 @@ name: Daily sync
 
 on:
   schedule:
-    # 04:00 JST (19:00 UTC). Steam sales switch over at 02:00 JST.
-    - cron: "0 19 * * *"
+    # 04:17 JST (19:17 UTC). Steam sales switch over at 02:00 JST. Off the hour, because
+    # GitHub delays scheduled runs at :00 the most.
+    - cron: "17 19 * * *"
   workflow_dispatch:
 
 permissions:
