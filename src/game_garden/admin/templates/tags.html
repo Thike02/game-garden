@@ -6,8 +6,8 @@
   {% if tags %}
   <div class="actions" style="margin-top: 0">
     {% for t in tags %}
-    <a class="tag tag-{{ t.color }}" href="/tags/{{ t.id }}"
-       style="text-decoration: none; padding: 2px 12px">
+    <a class="tag" href="/tags/{{ t.id }}"
+       style="color: {{ t.color }}; text-decoration: none; padding: 2px 12px">
       {{ "🔒 " if not t.is_public }}{{ t.name }} <span class="muted">{{ t.games }}本</span>
     </a>
     {% endfor %}
@@ -21,11 +21,7 @@
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <div class="grid">
       <label class="field">名前<input type="text" name="name" maxlength="30" required placeholder="ストーリークリア"></label>
-      <label class="field">色
-        <select name="color">
-          {% for c in tag_colors %}<option value="{{ c }}">{{ tag_color_labels[c] }}</option>{% endfor %}
-        </select>
-      </label>
+      <label class="field">色<input type="color" name="color" value="{{ default_tag_color }}"></label>
     </div>
     <div class="actions">
       <label class="small"><input type="checkbox" name="is_public" checked> 公開ページに出す</label>

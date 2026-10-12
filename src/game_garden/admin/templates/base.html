@@ -35,6 +35,7 @@
     .flash { padding: 10px 14px; border-radius: 6px; border: 1px solid var(--ok); color: var(--ok); }
     .flash.err { border-color: var(--bad); color: var(--bad); }
     input, select, button { font: inherit; color: inherit; }
+    input[type=color] { width: 4em; height: 2.2em; padding: 2px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; }
     input[type=text], input[type=password], input[type=number], input[type=url], select {
       background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; width: 100%; }
     button { background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; padding: 6px 12px; cursor: pointer; }
@@ -51,14 +52,8 @@
     .ok { color: var(--ok); } .bad { color: var(--bad); }
     .badge { font-size: .75rem; border: 1px solid currentColor; border-radius: 999px; padding: 0 8px; white-space: nowrap; }
     details summary { cursor: pointer; color: var(--accent); }
-    /* tag palette: same names as game_garden.tags.COLORS and the web page */
+    /* tag colour comes from an inline style (#rrggbb, validated) */
     .tag { display: inline-block; border-radius: 999px; padding: 0 10px; font-size: .8rem; border: 1px solid currentColor; white-space: nowrap; }
-    .tag-blue { color: #66c0f4; } .tag-green { color: #8bc34a; } .tag-yellow { color: #e5b143; } .tag-orange { color: #f0883e; }
-    .tag-red { color: #ff7b72; } .tag-pink { color: #f778ba; } .tag-purple { color: #b383ff; } .tag-gray { color: #9aa5b1; }
-    @media (prefers-color-scheme: light) {
-      .tag-blue { color: #1a73b8; } .tag-green { color: #3d7d1a; } .tag-yellow { color: #9a6b00; } .tag-orange { color: #b85412; }
-      .tag-red { color: #c62828; } .tag-pink { color: #b0306e; } .tag-purple { color: #6f42c1; } .tag-gray { color: #5d6b78; }
-    }
     .table-scroll { overflow-x: auto; }
   </style>
 </head>

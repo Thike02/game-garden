@@ -85,8 +85,7 @@ def create_app() -> FastAPI:
     templates.env.globals["csrf"] = csrf_token
     templates.env.globals["platforms"] = library.PLATFORMS
     templates.env.globals["jst_date"] = _jst_date
-    templates.env.globals["tag_colors"] = tags.COLORS
-    templates.env.globals["tag_color_labels"] = tags.COLOR_LABELS
+    templates.env.globals["default_tag_color"] = tags.DEFAULT_COLOR
 
     @app.middleware("http")
     async def local_only(request: Request, call_next):

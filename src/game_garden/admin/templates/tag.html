@@ -5,14 +5,10 @@
 <form method="post" action="/tags/{{ tag.id }}">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <section>
-    <h1><span class="tag tag-{{ tag.color }}" style="font-size: 1rem">{{ tag.name }}</span> の編集</h1>
+    <h1><span class="tag" style="color: {{ tag.color }}; font-size: 1rem">{{ tag.name }}</span> の編集</h1>
     <div class="grid">
       <label class="field">名前<input type="text" name="name" maxlength="30" value="{{ tag.name }}" required></label>
-      <label class="field">色
-        <select name="color">
-          {% for c in tag_colors %}<option value="{{ c }}" {{ "selected" if c == tag.color }}>{{ tag_color_labels[c] }}</option>{% endfor %}
-        </select>
-      </label>
+      <label class="field">色<input type="color" name="color" value="{{ tag.color }}"></label>
       <label class="field">並び順（小さいほど前）<input type="number" name="sort_order" value="{{ tag.sort_order }}"></label>
     </div>
     <div class="actions">
