@@ -20,17 +20,14 @@ export function AchievementCard({ achievement: a }: { achievement: AchievementLi
         <strong>{a.display_name}</strong>
         {a.game_name && <span className="muted small">{a.game_name}</span>}
         <span className="small">{a.description || <span className="muted">（説明なし）</span>}</span>
-        <span className="small">
-          {a.global_percent !== null && (
-            <span className={`rarity-text ${a.rarity ?? ""}`}>全体の {a.global_percent.toFixed(1)}% が解除</span>
-          )}
-          {a.unlocked_at && (
-            <span className="muted">
-              {" ・ "}
-              {formatJst(a.unlocked_at, { year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} に解除
-            </span>
-          )}
-        </span>
+        {a.global_percent !== null && (
+          <span className={`small rarity-text ${a.rarity ?? ""}`}>全体の {a.global_percent.toFixed(1)}% が解除</span>
+        )}
+        {a.unlocked_at && (
+          <span className="small muted">
+            {formatJst(a.unlocked_at, { year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} に解除
+          </span>
+        )}
       </span>
     </span>
   );
