@@ -2,22 +2,14 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable
 
 from supabase import Client
 
-# Palette names; the admin and the web page map each to a colour that reads well in both themes.
-COLORS = ["blue", "green", "yellow", "orange", "red", "pink", "purple", "gray"]
-COLOR_LABELS = {
-    "blue": "青",
-    "green": "緑",
-    "yellow": "黄",
-    "orange": "橙",
-    "red": "赤",
-    "pink": "桃",
-    "purple": "紫",
-    "gray": "灰",
-}
+DEFAULT_COLOR = "#66c0f4"
+# Only '#rrggbb': the colour is written into the page's CSS (a DB check enforces this too, 0011).
+_HEX = re.compile(r"^#[0-9a-f]{6}$")
 
 
 class TagError(ValueError):
@@ -30,7 +22,8 @@ def _clean(name: str, color: str) -> tuple[str, str]:
         raise TagError("タグの名前を入れてください")
     if len(name) > 30:
         raise TagError("タグの名前は30文字までにしてください")
-    if color not in COLORS:
+    color = color.strip().lower()
+    if not _HEX.match(color):
         raise TagError("色を選んでください")
     return name, color
 
