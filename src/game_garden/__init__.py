@@ -58,7 +58,7 @@ def notify_failure(args: argparse.Namespace) -> None:
 def admin(args: argparse.Namespace) -> None:
     from game_garden.admin import serve
 
-    serve(open_browser=not args.no_browser)
+    serve(open_browser=not args.no_browser, reload=not args.no_reload)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -87,6 +87,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     admin_cmd = commands.add_parser("admin", help="open the local admin (setup, manual games) in the browser")
     admin_cmd.add_argument("--no-browser", action="store_true", help="don't open the browser")
+    admin_cmd.add_argument("--no-reload", action="store_true", help="don't restart when the code changes")
     admin_cmd.set_defaults(func=admin)
     return parser
 

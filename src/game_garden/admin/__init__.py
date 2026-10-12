@@ -5,6 +5,7 @@ Runs on 127.0.0.1 only and uses the service_role key from .env.
 
 from __future__ import annotations
 
+import os
 import secrets
 from datetime import date, datetime
 import webbrowser
@@ -29,6 +30,7 @@ HOST = "127.0.0.1"
 PORT = 8765
 ENV_PATH = Path(".env")
 ENV_TEMPLATE = Path(".env.example")
+CSRF_ENV = "GAME_GARDEN_ADMIN_CSRF"
 REQUIRED = ("steam_api_key", "steam_id", "supabase_url", "supabase_service_role_key")
 STORE_SEARCH_URL = "https://store.steampowered.com/api/storesearch/"
 
@@ -80,8 +82,9 @@ async def _image_url(database, image_url: str, image_file: UploadFile | None) ->
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Game Garden admin", docs_url=None, redoc_url=None, openapi_url=None)
-    # Any web page could POST to localhost, so every form carries this per-process token.
-    csrf_token = secrets.token_urlsafe(32)
+    # Any web page could POST to localhost, so every form carries this token. `serve` puts it in
+    # the environment so it survives auto-reloads and pages already open keep working.
+    csrf_token = os.environ.get(CSRF_ENV) or secrets.token_urlsafe(32)
     templates.env.globals["csrf"] = csrf_token
     templates.env.globals["platforms"] = library.PLATFORMS
     templates.env.globals["jst_date"] = _jst_date
@@ -355,11 +358,25 @@ def create_app() -> FastAPI:
     return app
 
 
-def serve(*, open_browser: bool = True) -> None:
+def serve(*, open_browser: bool = True, reload: bool = True) -> None:
     import uvicorn
 
     url = f"http://{HOST}:{PORT}/"
     print(f"Game Garden admin: {url}  (Ctrl+C で終了)")
+    os.environ.setdefault(CSRF_ENV, secrets.token_urlsafe(32))
     if open_browser:
         webbrowser.open(url)
-    uvicorn.run(create_app(), host=HOST, port=PORT, log_level="warning")
+    if not reload:
+        uvicorn.run(create_app(), host=HOST, port=PORT, log_level="warning")
+        return
+    # Restart on code changes so the admin never runs stale Python against new templates.
+    package_dir = Path(__file__).resolve().parents[1]
+    uvicorn.run(
+        "game_garden.admin:create_app",
+        factory=True,
+        host=HOST,
+        port=PORT,
+        log_level="warning",
+        reload=True,
+        reload_dirs=[str(package_dir)],
+    )
