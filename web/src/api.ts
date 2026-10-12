@@ -77,7 +77,7 @@ export async function loadGarden(player: Player): Promise<GardenData> {
     fetchAll<Badge>((from, to) =>
       db
         .from("player_achievement_badges")
-        .select("game_id, game_name, api_name, display_name, description, icon_url, global_percent, rarity, unlocked_at")
+        .select("game_id, game_name, api_name, display_name, description, icon_url, global_percent, rarity, unlocked_at, hidden")
         .eq("player_id", player.id)
         .order("global_percent")
         .order("api_name")

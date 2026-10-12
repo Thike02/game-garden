@@ -88,7 +88,7 @@ export function GameAchievements({ gameId, unlocked }: Props) {
             const secret = def.hidden && !isUnlocked;
             const shown = {
               display_name: secret ? "隠し実績" : def.display_name,
-              description: secret ? "解除すると内容がわかります。" : def.description,
+              description: secret ? "解除すると内容がわかります。" : def.description || (def.hidden ? "隠し実績" : null),
               icon_url: isUnlocked ? def.icon_url : def.icon_gray_url,
               global_percent: def.global_percent,
               unlocked_at: unlockedAt,
@@ -98,7 +98,9 @@ export function GameAchievements({ gameId, unlocked }: Props) {
               <li key={def.api_name}>
                 <HoverCard
                   className={`achievement-row${isUnlocked ? "" : " locked"} ${rarity}`}
-                  content={() => <AchievementCard achievement={{ ...shown, rarity: rarity as Badge["rarity"] }} />}
+                  content={() => (
+                    <AchievementCard achievement={{ ...shown, hidden: def.hidden, rarity: rarity as Badge["rarity"] }} />
+                  )}
                 >
                   {shown.icon_url ? <img src={shown.icon_url} alt="" width={40} height={40} loading="lazy" /> : <span className="day-icon-blank" />}
                   <span className="achievement-row-body">

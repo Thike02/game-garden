@@ -46,6 +46,7 @@ export interface Badge {
   global_percent: number | null;
   rarity: Rarity | null;
   unlocked_at: string | null;
+  hidden: boolean; // Steam gives no description for hidden achievements
 }
 
 export interface AchievementDef {
