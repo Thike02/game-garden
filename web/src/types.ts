@@ -77,7 +77,7 @@ export interface PriceRow {
 export interface Tag {
   id: number;
   name: string;
-  color: string; // palette name, see --tag-* in styles.css
+  color: string; // '#rrggbb'
 }
 
 export interface GardenData {

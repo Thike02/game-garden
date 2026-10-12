@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { type CSSProperties, useMemo, useState } from "react";
 import { formatJst } from "../dates.ts";
 import type { Badge, Game, PlayerGame, Tag } from "../types.ts";
 import { GameAchievements } from "./GameAchievements.tsx";
@@ -35,6 +35,11 @@ function compare(sort: SortKey) {
         return a.game.name.localeCompare(b.game.name, "ja");
     }
   };
+}
+
+/** The tag's own colour (#rrggbb, checked by the database) drives border, text and pressed state. */
+function tagStyle(t: Tag): CSSProperties {
+  return { "--c": t.color } as CSSProperties;
 }
 
 function PlayLine({ owned }: { owned: PlayerGame }) {
@@ -117,7 +122,8 @@ export function GameList({ games, playerGames, unlocked, tags, gameTags, showPla
           {tags.map((t) => (
             <button
               key={t.id}
-              className={`tag-chip tag-${t.color}`}
+              className="tag-chip"
+              style={tagStyle(t)}
               aria-pressed={tagFilter === t.id}
               onClick={() => setTagFilter(tagFilter === t.id ? null : t.id)}
             >
@@ -160,7 +166,7 @@ export function GameList({ games, playerGames, unlocked, tags, gameTags, showPla
                   .map((id) => tagById.get(id))
                   .filter((t): t is Tag => t !== undefined)
                   .map((t) => (
-                    <span key={t.id} className={`tag-chip small tag-${t.color}`}>
+                    <span key={t.id} className="tag-chip small" style={tagStyle(t)}>
                       {t.name}
                     </span>
                   ))}
