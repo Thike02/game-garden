@@ -5,6 +5,8 @@ export interface Player {
   steam_id: string | null;
   display_name: string;
   avatar_url: string | null;
+  avatar_frame_url: string | null; // animated Steam avatar frame
+  avatar_frame_static_url: string | null;
   show_playtime: boolean;
   show_wishlist: boolean;
 }

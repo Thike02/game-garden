@@ -42,7 +42,7 @@ function client() {
 export async function loadPlayers(): Promise<Player[]> {
   const { data, error } = await client()
     .from("players")
-    .select("id, steam_id, display_name, avatar_url, show_playtime, show_wishlist")
+    .select("id, steam_id, display_name, avatar_url, avatar_frame_url, avatar_frame_static_url, show_playtime, show_wishlist")
     .order("created_at");
   if (error) throw new Error(error.message);
   return data ?? [];

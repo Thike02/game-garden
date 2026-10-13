@@ -232,10 +232,33 @@ select,
   align-items: center;
 }
 
+.avatar-wrap {
+  position: relative;
+  flex: none;
+  width: 72px;
+  height: 72px;
+}
+
 .avatar {
+  display: block;
   border-radius: 4px;
   border: 2px solid var(--accent);
-  flex: none;
+}
+
+/* With a Steam avatar frame, the frame replaces the blue border. */
+.avatar-wrap.framed .avatar {
+  border: none;
+  border-radius: 0;
+}
+
+.avatar-frame {
+  position: absolute;
+  /* Steam draws frames about 1.22x the avatar size, centred on it */
+  width: 122%;
+  height: 122%;
+  left: -11%;
+  top: -11%;
+  pointer-events: none;
 }
 
 .stats {

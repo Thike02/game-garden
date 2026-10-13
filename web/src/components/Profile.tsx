@@ -22,7 +22,20 @@ export function Profile({ player, data }: Props) {
 
   return (
     <section className="panel profile">
-      {player.avatar_url && <img className="avatar" src={player.avatar_url} alt="" width={72} height={72} />}
+      {player.avatar_url && (
+        <span className={`avatar-wrap${player.avatar_frame_url ? " framed" : ""}`}>
+          <img className="avatar" src={player.avatar_url} alt="" width={72} height={72} />
+          {player.avatar_frame_url && (
+            // Same as Steam: the frame is drawn over the avatar, a bit larger than it.
+            <picture>
+              {player.avatar_frame_static_url && (
+                <source media="(prefers-reduced-motion: reduce)" srcSet={player.avatar_frame_static_url} />
+              )}
+              <img className="avatar-frame" src={player.avatar_frame_url} alt="" />
+            </picture>
+          )}
+        </span>
+      )}
       <div className="profile-body">
         <h1>{player.display_name} の庭</h1>
         <dl className="stats">
