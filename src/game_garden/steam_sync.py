@@ -43,13 +43,15 @@ def select_achievement_targets(
 
 def upsert_player(database: Client, steam: SteamClient, steam_id: str) -> str:
     summary = steam.get_player_summary(steam_id)
-    rows = db.upsert(
-        database,
-        "players",
-        [{"steam_id": summary.steam_id, "display_name": summary.display_name, "avatar_url": summary.avatar_url}],
-        on_conflict="steam_id",
-        returning=True,
-    )
+    row = {"steam_id": summary.steam_id, "display_name": summary.display_name, "avatar_url": summary.avatar_url}
+    try:
+        frame = steam.get_avatar_frame(steam_id)
+    except Exception as e:  # cosmetic; keep the stored frame rather than failing the sync
+        print(f"Avatar frame unavailable ({e}); keeping the previous one")
+    else:
+        row["avatar_frame_url"] = frame.animated_url if frame else None
+        row["avatar_frame_static_url"] = frame.static_url if frame else None
+    rows = db.upsert(database, "players", [row], on_conflict="steam_id", returning=True)
     return rows[0]["id"]
 
 

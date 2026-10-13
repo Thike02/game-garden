@@ -195,3 +195,21 @@ def test_store_items():
 def test_store_items_unknown_country():
     with pytest.raises(SteamError):
         make_client(lambda request: httpx.Response(200)).get_store_items([10], country_code="ZZ")
+
+
+def test_avatar_frame():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/IPlayerService/GetProfileItemsEquipped/v1/"
+        return httpx.Response(
+            200,
+            json={"response": {"avatar_frame": {"image_small": "items/1/anim.png", "image_large": "items/1/still.png"}}},
+        )
+
+    frame = make_client(handler).get_avatar_frame("7656")
+    assert frame.animated_url.endswith("/community_assets/images/items/1/anim.png")
+    assert frame.static_url.endswith("/community_assets/images/items/1/still.png")
+
+
+def test_no_avatar_frame():
+    client = make_client(lambda request: httpx.Response(200, json={"response": {"avatar_frame": {}}}))
+    assert client.get_avatar_frame("7656") is None

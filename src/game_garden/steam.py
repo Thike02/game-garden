@@ -15,6 +15,7 @@ STORE_ASSET_BASE = "https://shared.cloudflare.steamstatic.com/store_item_assets/
 # Fallback only: newer apps keep their header under a hashed folder, which only the store API knows.
 HEADER_IMAGE_URL = STORE_ASSET_BASE + "steam/apps/{appid}/header.jpg"
 STORE_ITEMS_BATCH = 100
+COMMUNITY_ITEM_BASE = "https://shared.cloudflare.steamstatic.com/community_assets/images/"
 
 # Store prices come in hundredths; currencies without a minor unit are stored in whole units.
 COUNTRY_CURRENCY = {"JP": "JPY", "US": "USD", "GB": "GBP", "KR": "KRW", "CN": "CNY", "TW": "TWD"}
@@ -63,6 +64,12 @@ class AchievementDef:
 class PlayerAchievement:
     api_name: str
     unlocked_at: datetime | None
+
+
+@dataclass(frozen=True)
+class AvatarFrame:
+    animated_url: str  # APNG, as shown on the Steam profile
+    static_url: str
 
 
 @dataclass(frozen=True)
@@ -175,6 +182,19 @@ class SteamClient:
             steam_id=p["steamid"],
             display_name=p.get("personaname") or p["steamid"],
             avatar_url=p.get("avatarfull"),
+        )
+
+    def get_avatar_frame(self, steam_id: str) -> AvatarFrame | None:
+        """The equipped Points Shop avatar frame, or None when there is none."""
+        data = self._get_json("/IPlayerService/GetProfileItemsEquipped/v1/", steamid=steam_id)
+        frame = data.get("response", {}).get("avatar_frame") or {}
+        small, large = frame.get("image_small"), frame.get("image_large")
+        if not small and not large:
+            return None
+        # image_small is the animated one; image_large is a still of the same frame.
+        return AvatarFrame(
+            animated_url=COMMUNITY_ITEM_BASE + (small or large),
+            static_url=COMMUNITY_ITEM_BASE + (large or small),
         )
 
     def get_owned_games(self, steam_id: str) -> list[OwnedGame]:
