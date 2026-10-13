@@ -1,9 +1,13 @@
-import { type CSSProperties, useMemo, useState } from "react";
+import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import { formatJst } from "../dates.ts";
 import type { Badge, Game, PlayerGame, Tag } from "../types.ts";
 import { GameAchievements } from "./GameAchievements.tsx";
 import { HoverCard } from "./HoverCard.tsx";
 import { GameImage } from "./GameImage.tsx";
+import { ShowMore } from "./ShowMore.tsx";
+import { useIsPhone } from "../useIsPhone.ts";
+
+const PHONE_LIMIT = 10;
 
 type SortKey = "progress" | "recent" | "playtime" | "name";
 
@@ -85,6 +89,10 @@ export function GameList({ games, playerGames, unlocked, tags, gameTags, showPla
   }, [unlocked]);
   const [sort, setSort] = useState<SortKey>(showPlaytime ? "recent" : "progress");
   const [onlyAchievements, setOnlyAchievements] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const isPhone = useIsPhone();
+  // A new filter or order starts short again.
+  useEffect(() => setExpanded(false), [tagFilter, sort, onlyAchievements]);
 
   const rows = useMemo(() => {
     const list: Row[] = [];
@@ -133,7 +141,7 @@ export function GameList({ games, playerGames, unlocked, tags, gameTags, showPla
         </div>
       )}
       <ul className="games">
-        {rows.map(({ game, owned, progress }) => {
+        {(isPhone && !expanded ? rows.slice(0, PHONE_LIMIT) : rows).map(({ game, owned, progress }) => {
           const expanded = open === game.id;
           // Hand-entered games only have counts, no per-achievement data.
           const expandable = progress !== null && owned.source !== "manual";
@@ -195,6 +203,15 @@ export function GameList({ games, playerGames, unlocked, tags, gameTags, showPla
           );
         })}
       </ul>
+      {isPhone && (
+        <ShowMore
+          total={rows.length}
+          shown={expanded ? rows.length : Math.min(rows.length, PHONE_LIMIT)}
+          expanded={expanded}
+          onToggle={() => setExpanded(!expanded)}
+          unit="本"
+        />
+      )}
     </section>
   );
 }

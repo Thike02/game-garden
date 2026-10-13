@@ -4,6 +4,10 @@ import { formatJst } from "../dates.ts";
 import type { AchievementDef, Badge } from "../types.ts";
 import { AchievementCard } from "./AchievementCard.tsx";
 import { HoverCard } from "./HoverCard.tsx";
+import { ShowMore } from "./ShowMore.tsx";
+import { useIsPhone } from "../useIsPhone.ts";
+
+const PHONE_LIMIT = 10;
 
 type Sort = "unlocked" | "rarity";
 
@@ -32,6 +36,9 @@ export function GameAchievements({ gameId, unlocked }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [sort, setSort] = useState<Sort>("unlocked");
   const [lockedOnly, setLockedOnly] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const isPhone = useIsPhone();
+  useEffect(() => setExpanded(false), [sort, lockedOnly]);
 
   useEffect(() => {
     loadGameAchievements(gameId)
@@ -83,7 +90,7 @@ export function GameAchievements({ gameId, unlocked }: Props) {
         <p className="muted small">未解除の実績はありません。コンプリート！✨</p>
       ) : (
         <ul className="achievement-list">
-          {rows.map(({ def, isUnlocked, unlockedAt }) => {
+          {(isPhone && !expanded ? rows.slice(0, PHONE_LIMIT) : rows).map(({ def, isUnlocked, unlockedAt }) => {
             // Locked hidden achievements stay secret, like on Steam.
             const secret = def.hidden && !isUnlocked;
             const shown = {
@@ -118,6 +125,15 @@ export function GameAchievements({ gameId, unlocked }: Props) {
             );
           })}
         </ul>
+      )}
+      {isPhone && rows.length > 0 && (
+        <ShowMore
+          total={rows.length}
+          shown={expanded ? rows.length : Math.min(rows.length, PHONE_LIMIT)}
+          expanded={expanded}
+          onToggle={() => setExpanded(!expanded)}
+          unit="個"
+        />
       )}
     </div>
   );

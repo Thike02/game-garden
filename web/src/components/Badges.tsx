@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { formatJst } from "../dates.ts";
 import type { Badge, Rarity } from "../types.ts";
+import { useIsPhone } from "../useIsPhone.ts";
 import { HoverCard } from "./HoverCard.tsx";
+import { ShowMore } from "./ShowMore.tsx";
 import { AchievementCard } from "./AchievementCard.tsx";
 
 const RARITY_LABEL: Record<Rarity, string> = {
@@ -12,10 +14,12 @@ const RARITY_LABEL: Record<Rarity, string> = {
   common: "Common",
 };
 const INITIAL = 24;
+const INITIAL_PHONE = 6;
 
 export function Badges({ badges }: { badges: Badge[] }) {
   const [expanded, setExpanded] = useState(false);
-  const shown = expanded ? badges : badges.slice(0, INITIAL);
+  const limit = useIsPhone() ? INITIAL_PHONE : INITIAL;
+  const shown = expanded ? badges : badges.slice(0, limit);
 
   const counts = badges.reduce<Partial<Record<Rarity, number>>>((acc, b) => {
     if (b.rarity) acc[b.rarity] = (acc[b.rarity] ?? 0) + 1;
@@ -57,11 +61,7 @@ export function Badges({ badges }: { badges: Badge[] }) {
           ))}
         </ul>
       )}
-      {badges.length > INITIAL && (
-        <button className="link-button" onClick={() => setExpanded(!expanded)}>
-          {expanded ? "たたむ" : `ぜんぶ見る（${badges.length} 個）`}
-        </button>
-      )}
+      <ShowMore total={badges.length} shown={shown.length} expanded={expanded} onToggle={() => setExpanded(!expanded)} unit="個" />
     </section>
   );
 }

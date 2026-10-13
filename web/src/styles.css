@@ -217,6 +217,12 @@ select,
   margin-top: 12px;
 }
 
+.show-more {
+  display: block;
+  width: 100%;
+  padding: 8px;
+}
+
 .controls {
   display: flex;
   flex-wrap: wrap;
@@ -686,6 +692,22 @@ button.tag-chip[aria-pressed="true"] {
 
 .price-chart .toggle {
   margin-bottom: 4px;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 4px 0;
+  color: var(--muted);
+}
+
+.legend-price {
+  color: var(--accent);
+}
+
+.legend-low {
+  color: var(--legendary);
 }
 
 @media (max-width: 600px) {
