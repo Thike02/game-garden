@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { addDays } from "../dates.ts";
 import { formatPrice } from "../pricing.ts";
+import { useIsPhone } from "../useIsPhone.ts";
 import type { PriceRow } from "../types.ts";
 
 interface Props {
@@ -17,6 +18,7 @@ const toTime = (day: string) => Date.parse(`${day}T00:00:00Z`);
 
 export function PriceChart({ rows, today, lowest, average }: Props) {
   const [range, setRange] = useState<Range>("1y");
+  const isPhone = useIsPhone();
   if (rows.length === 0) return <p className="muted small">価格の記録がまだありません。</p>;
 
   const currency = rows[rows.length - 1].currency;
@@ -31,6 +33,14 @@ export function PriceChart({ rows, today, lowest, average }: Props) {
   const last = points[points.length - 1];
   if (last && last.recorded_on < today) points.push({ ...last, recorded_on: today });
   const data = points.map((r) => ({ t: toTime(r.recorded_on), price: r.price, discount: r.discount_pct }));
+
+  // Zoom the price axis to where the prices move instead of starting at ¥0.
+  const values = [...data.map((d) => d.price), ...(lowest !== null ? [lowest] : []), ...(average !== null ? [average] : [])];
+  const low = Math.min(...values);
+  const high = Math.max(...values);
+  const pad = Math.max((high - low) * 0.15, high * 0.05);
+  const step = high >= 1000 ? 100 : 10; // round the ends to tidy numbers
+  const domain: [number, number] = [Math.max(0, Math.floor((low - pad) / step) * step), Math.ceil((high + pad) / step) * step];
 
   const ticks = (value: number) => {
     const d = new Date(value);
@@ -47,8 +57,14 @@ export function PriceChart({ rows, today, lowest, average }: Props) {
           全期間
         </button>
       </div>
-      <ResponsiveContainer width="100%" height={220}>
-        <LineChart data={data} margin={{ top: 12, right: 16, bottom: 0, left: 8 }}>
+      {/* Legend instead of labels on the lines, which overlapped the price line on phones */}
+      <div className="chart-legend small">
+        <span className="legend-price">━ 価格</span>
+        {lowest !== null && <span className="legend-low">- - 最安値 {formatPrice(lowest, currency)}</span>}
+        {average !== null && <span className="legend-avg">··· 1年の平均 {formatPrice(Math.round(average), currency)}</span>}
+      </div>
+      <ResponsiveContainer width="100%" height={isPhone ? 200 : 220}>
+        <LineChart data={data} margin={{ top: 8, right: isPhone ? 8 : 16, bottom: 0, left: isPhone ? 0 : 8 }}>
           <CartesianGrid stroke="var(--grid)" vertical={false} />
           <XAxis
             dataKey="t"
@@ -61,9 +77,10 @@ export function PriceChart({ rows, today, lowest, average }: Props) {
           />
           <YAxis
             stroke="var(--muted)"
-            fontSize={12}
-            width={64}
-            domain={[0, "auto"]}
+            fontSize={isPhone ? 11 : 12}
+            width={isPhone ? 52 : 64}
+            domain={domain}
+            allowDataOverflow
             tickFormatter={(v: number) => formatPrice(v, currency)}
           />
           <Tooltip
@@ -75,10 +92,10 @@ export function PriceChart({ rows, today, lowest, average }: Props) {
             }}
           />
           {lowest !== null && (
-            <ReferenceLine y={lowest} stroke="var(--legendary)" strokeDasharray="4 4" label={{ value: "最安値", fill: "var(--legendary)", fontSize: 11, position: "insideBottomLeft" }} />
+            <ReferenceLine y={lowest} stroke="var(--legendary)" strokeDasharray="4 4" />
           )}
           {average !== null && (
-            <ReferenceLine y={average} stroke="var(--muted)" strokeDasharray="2 4" label={{ value: "1年の平均", fill: "var(--muted)", fontSize: 11, position: "insideTopLeft" }} />
+            <ReferenceLine y={average} stroke="var(--muted)" strokeDasharray="2 4" />
           )}
           <Line type="stepAfter" dataKey="price" stroke="var(--accent)" strokeWidth={2} dot={false} isAnimationActive={false} />
         </LineChart>

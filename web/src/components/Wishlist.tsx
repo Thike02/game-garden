@@ -3,6 +3,10 @@ import { addDays, formatJst, todayJst } from "../dates.ts";
 import { formatPrice, timeWeightedAverage } from "../pricing.ts";
 import type { Game, PriceRow, WishlistItem } from "../types.ts";
 import { GameImage } from "./GameImage.tsx";
+import { ShowMore } from "./ShowMore.tsx";
+import { useIsPhone } from "../useIsPhone.ts";
+
+const PHONE_LIMIT = 10;
 
 // Recharts is most of the bundle; load it only when a chart is opened.
 const PriceChart = lazy(() => import("./PriceChart.tsx").then((m) => ({ default: m.PriceChart })));
@@ -23,6 +27,8 @@ interface Row {
 
 export function Wishlist({ games, wishlist, prices }: Props) {
   const [open, setOpen] = useState<number | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const isPhone = useIsPhone();
   const today = todayJst();
 
   const rows = useMemo(() => {
@@ -61,7 +67,7 @@ export function Wishlist({ games, wishlist, prices }: Props) {
         </span>
       </div>
       <ul className="wishlist">
-        {rows.map(({ game, history, current, average, isLow }) => {
+        {(isPhone && !expanded ? rows.slice(0, PHONE_LIMIT) : rows).map(({ game, history, current, average, isLow }) => {
           const expanded = open === game.id;
           const onSaleNow = current !== null && current.discount_pct > 0;
           return (
@@ -88,13 +94,12 @@ export function Wishlist({ games, wishlist, prices }: Props) {
               {expanded && (
                 <div className="wish-detail">
                   <p className="small muted">
-                    {game.lowest_price !== null && `最安値 ${formatPrice(game.lowest_price, game.lowest_price_currency ?? "JPY")}`}
-                    {average !== null && current && ` ・ 1年の平均 ${formatPrice(Math.round(average), current.currency)}`}
+                    {/* Lowest price and average are in the chart's legend. */}
                     {current?.sale_ends_at &&
-                      ` ・ セール終了 ${formatJst(current.sale_ends_at, { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}`}
+                      `セール終了 ${formatJst(current.sale_ends_at, { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}`}
                     {game.steam_appid && (
                       <>
-                        {" ・ "}
+                        {current?.sale_ends_at && " ・ "}
                         <a href={`https://store.steampowered.com/app/${game.steam_appid}/`} target="_blank" rel="noreferrer">
                           ストアを開く
                         </a>
@@ -110,6 +115,15 @@ export function Wishlist({ games, wishlist, prices }: Props) {
           );
         })}
       </ul>
+      {isPhone && (
+        <ShowMore
+          total={rows.length}
+          shown={expanded ? rows.length : Math.min(rows.length, PHONE_LIMIT)}
+          expanded={expanded}
+          onToggle={() => setExpanded(!expanded)}
+          unit="本"
+        />
+      )}
     </section>
   );
 }
