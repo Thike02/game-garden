@@ -57,7 +57,14 @@ class ItadClient:
     def _request(self, method: str, path: str, *, params: dict | None = None, json: object = None) -> object:
         params = {"key": self._api_key, **(params or {})}
         for attempt in range(self._max_retries + 1):
-            response = self._http.request(method, path, params=params, json=json)
+            try:
+                response = self._http.request(method, path, params=params, json=json)
+            except httpx.TransportError:
+                # Dropped connections and timeouts are transient too.
+                if attempt < self._max_retries:
+                    time.sleep(2**attempt)
+                    continue
+                raise
             if (response.status_code == 429 or response.status_code >= 500) and attempt < self._max_retries:
                 time.sleep(2**attempt)
                 continue

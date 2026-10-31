@@ -60,3 +60,29 @@ def test_steam_lows():
 def test_bad_key():
     with pytest.raises(ItadError):
         make_client(lambda request: httpx.Response(403)).lookup_steam_apps([10])
+
+
+def test_retries_dropped_connection(monkeypatch):
+    monkeypatch.setattr("game_garden.itad.time.sleep", lambda _: None)
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        if len(calls) == 1:
+            raise httpx.RemoteProtocolError("Server disconnected without sending a response.")
+        return httpx.Response(200, json={"app/10": "game-a"})
+
+    http = httpx.Client(base_url=API_BASE, transport=httpx.MockTransport(handler))
+    assert ItadClient("test-key", http=http, max_retries=1).lookup_steam_apps([10]) == {10: "game-a"}
+    assert len(calls) == 2
+
+
+def test_gives_up_after_retries(monkeypatch):
+    monkeypatch.setattr("game_garden.itad.time.sleep", lambda _: None)
+
+    def handler(request):
+        raise httpx.ReadTimeout("timed out")
+
+    http = httpx.Client(base_url=API_BASE, transport=httpx.MockTransport(handler))
+    with pytest.raises(httpx.ReadTimeout):
+        ItadClient("test-key", http=http, max_retries=2).lookup_steam_apps([10])
