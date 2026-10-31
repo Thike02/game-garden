@@ -156,7 +156,14 @@ class SteamClient:
     def _get(self, path: str, **params: object) -> httpx.Response:
         params = {"key": self._api_key, **params}
         for attempt in range(self._max_retries + 1):
-            response = self._http.get(path, params=params)
+            try:
+                response = self._http.get(path, params=params)
+            except httpx.TransportError:
+                # Dropped connections and timeouts are transient too.
+                if attempt < self._max_retries:
+                    time.sleep(2**attempt)
+                    continue
+                raise
             # 429 / 5xx are transient on Steam's side; back off and retry.
             if response.status_code == 429 or response.status_code >= 500:
                 if attempt < self._max_retries:

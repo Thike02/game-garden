@@ -213,3 +213,29 @@ def test_avatar_frame():
 def test_no_avatar_frame():
     client = make_client(lambda request: httpx.Response(200, json={"response": {"avatar_frame": {}}}))
     assert client.get_avatar_frame("7656") is None
+
+
+def test_retries_dropped_connection(monkeypatch):
+    monkeypatch.setattr("game_garden.steam.time.sleep", lambda _: None)
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        if len(calls) == 1:
+            raise httpx.RemoteProtocolError("Server disconnected without sending a response.")
+        return httpx.Response(200, json={"response": {"avatar_frame": {}}})
+
+    http = httpx.Client(base_url=API_BASE, transport=httpx.MockTransport(handler))
+    assert SteamClient("test-key", http=http, max_retries=1).get_avatar_frame("7656") is None
+    assert len(calls) == 2
+
+
+def test_gives_up_after_retries(monkeypatch):
+    monkeypatch.setattr("game_garden.steam.time.sleep", lambda _: None)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("timed out")
+
+    http = httpx.Client(base_url=API_BASE, transport=httpx.MockTransport(handler))
+    with pytest.raises(httpx.ReadTimeout):
+        SteamClient("test-key", http=http, max_retries=2).get_avatar_frame("7656")
