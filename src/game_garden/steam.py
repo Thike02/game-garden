@@ -110,6 +110,18 @@ def header_image_from_assets(appid: int, assets: dict | None) -> str:
     return HEADER_IMAGE_URL.format(appid=appid)
 
 
+def pick_purchase_option(item: dict) -> dict | None:
+    """The game's own package when there is one.
+
+    Steam's best option can be a bundle discounted because the user owns part of it, whose
+    prices mix the bundle discount with the sale; the plain package has the real ones.
+    """
+    packages = [o for o in item.get("purchase_options", []) if o.get("packageid") and "final_price_in_cents" in o]
+    if packages:
+        return min(packages, key=lambda o: int(o["final_price_in_cents"]))
+    return item.get("best_purchase_option")
+
+
 def parse_store_price(option: dict | None, *, is_free: bool, currency: str) -> StorePrice | None:
     if is_free:
         return StorePrice(price=0, regular_price=0, discount_pct=0, currency=currency)
@@ -307,7 +319,7 @@ class SteamClient:
             request = {
                 "ids": [{"appid": appid} for appid in appids[start : start + STORE_ITEMS_BATCH]],
                 "context": {"language": self._language, "country_code": country_code.upper()},
-                "data_request": {"include_release": True, "include_assets": True},
+                "data_request": {"include_release": True, "include_assets": True, "include_all_purchase_options": True},
             }
             data = self._get_json("/IStoreBrowseService/GetItems/v1/", input_json=json.dumps(request))
             for item in data.get("response", {}).get("store_items", []):
@@ -319,7 +331,7 @@ class SteamClient:
                         name=item.get("name") or f"App {item['appid']}",
                         coming_soon=bool(item.get("is_coming_soon")),
                         price=parse_store_price(
-                            item.get("best_purchase_option"), is_free=bool(item.get("is_free")), currency=currency
+                            pick_purchase_option(item), is_free=bool(item.get("is_free")), currency=currency
                         ),
                         header_image_url=header_image_from_assets(item["appid"], item.get("assets")),
                     )

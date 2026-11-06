@@ -4,7 +4,14 @@ from datetime import UTC, datetime
 import httpx
 import pytest
 
-from game_garden.steam import API_BASE, SteamClient, SteamError, SteamPrivateProfileError, parse_store_price
+from game_garden.steam import (
+    API_BASE,
+    SteamClient,
+    SteamError,
+    SteamPrivateProfileError,
+    parse_store_price,
+    pick_purchase_option,
+)
 
 
 def make_client(handler) -> SteamClient:
@@ -148,6 +155,35 @@ def test_store_price_ignores_bundle_discount():
     price = parse_store_price(option, is_free=False, currency="JPY")
     assert (price.price, price.regular_price, price.discount_pct) == (1700, 1700, 0)
     assert price.sale_ends_at is None
+
+
+def test_owned_bundle_on_sale_uses_the_game_package():
+    # Owning part of a bundle makes it the best option, with the bundle discount baked into its prices.
+    bundle = {
+        "bundleid": 62221,
+        "final_price_in_cents": "63400",
+        "original_price_in_cents": "79200",
+        "discount_pct": 20,
+        "bundle_discount_pct": 10,
+        "price_before_bundle_discount": "88000",
+        "active_discounts": [{"discount_amount": "17600", "discount_end_date": 1794502800}],
+    }
+    package = {
+        "packageid": 870159,
+        "final_price_in_cents": "70400",
+        "original_price_in_cents": "88000",
+        "discount_pct": 20,
+        "active_discounts": [{"discount_amount": "17600", "discount_end_date": 1794502800}],
+    }
+    option = pick_purchase_option({"best_purchase_option": bundle, "purchase_options": [bundle, package]})
+    price = parse_store_price(option, is_free=False, currency="JPY")
+    assert (price.price, price.regular_price, price.discount_pct) == (704, 880, 20)
+
+
+def test_pick_purchase_option_falls_back_to_best():
+    best = {"bundleid": 1, "final_price_in_cents": "50000"}
+    assert pick_purchase_option({"best_purchase_option": best, "purchase_options": [best]}) is best
+    assert pick_purchase_option({}) is None
 
 
 def test_store_price_keeps_cents_for_usd():
